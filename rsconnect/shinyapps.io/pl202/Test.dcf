@@ -1,0 +1,11 @@
+name: Test
+title: Test
+account: pl202
+server: shinyapps.io
+appId: 183415
+bundleId: 842508
+url: https://pl202.shinyapps.io/Test/
+when: 1495845858.89981
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: SimulatingSpatialData.R
