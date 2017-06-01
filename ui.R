@@ -16,17 +16,20 @@ title = "CEBRA",
 ####################################################################                        
 tabPanel("Introduction",
         # Application desciption
-        h1("Economic cost of invasive species Australia"),
-        
+        h1("Economic cost of invasive species Australia", align = "center"),
+        h2("Synopsis", align = "center"),
+        br(),
         tags$p("This application is designed to illustrate alternative models for calculating 
                 economic cost of invasive species to Australia. Alternative models will 
-                account for market and non-market values. 
-                Impacts on environment, economy, culture and human health
+                account for market and non-market values. Impacts on environment, 
+                economy, culture and human health
                 will be considered. It will combine elements of Dodd's framework, ACERA 1002 and Holt et al 2013; it will utilise statistics 
-                related to potentially affected sectors of the economy and vulnerable native plats."),
-        br(),        
-        h3("Dodd's framework for prioritising is based on the following equation and linear programing (LP):"),
+                related to potentially affected sectors of the economy and vulnerable native plats.",
+               align = "center"),
+        br(),   
         
+        fluidRow(column(6, 
+        h3("Dodd's framework for prioritising is based on the following equation and linear programing (LP):"),
         tags$p("(Risk [total expected damage]*Effectiveness [Proportion of damage that could be reduced]*
                 Probability that management succeeds )/(Cost of management)"),
         br(),
@@ -34,7 +37,7 @@ tabPanel("Introduction",
         tags$p("I am not sure if LP contributes much value, the order is either determined by benefit/cost ratio or
                 not robust to uncertainty if distributions for benefit/cost variables are overlapping for different species."),
         tags$p("For the 'effectiveness*prob of success' part of Dodd's equation, I suggest we use John Holt's method for elicitation."),
-        tags$p("And for the 'management cost' part, a simplified version of Hester et al 2013."),
+        tags$p("And for the 'management cost' part, use Aaron's code. Simplify it?"),
         tags$p("To calculate 'total damage ($)', I suggest we list possibly affected industries and elicit severity with which these
                        can be impacted."),
         br(),
@@ -44,7 +47,12 @@ tabPanel("Introduction",
         br(),
         h3("Rank 20 species as a demo"),
         tags$p("Use the app to demostrate how ranking will change depending on the weights given to business, amenity and environment,
-                as well as methodology chosen for combining these effects."),
+                as well as methodology chosen for combining these effects.")
+),# end first column
+column(6,        
+        h3("Additional ideas to consider:"),
+        tags$ul("Use corrective coefficients to adjust values at risk (ref. John Mumford)"),
+        tags$ul("Potential economic impact could be worsen if the species is used or suspected in agro-terror attack"),
         br(),        
         h3("Some of the key assumptions (all criticised in the literature):"),
         tags$ul("Ignore climate change"),
@@ -52,10 +60,13 @@ tabPanel("Introduction",
         tags$ul("Assume maximum possible range (based on CLIMEX model)"),
         tags$ul("Focus on single species at a time"),
         tags$ul("Model management/damage (market) costs as linear in space and time")
+)# end second column
+)# end first row
 ),#end introduction panel
 
 ####################################################################                         
 tabPanel("Model inputs: biology", 
+        fluidRow(column(5,  
         h3("Select one of the 20 species from Australia's priority list"), 
         selectInput("species", "Select species", c("Xylella","Khapra beetle",
                 "Exotic fruit fly","Karnal bunt","Huanglongbing","Gypsy moths",
@@ -64,20 +75,23 @@ tabPanel("Model inputs: biology",
                 "Guava rust","Airborne phytophthora","Exototic bees","Panama disease tropical race 4",
                 "Potato cyst nematode","Leaf miner")),
 
-        imageOutput("species_photo"),
-                
+        imageOutput("species_photo")
+        ),# end first column 
+        column(7,
         h3("Map indicating simulated maximum range of selected species:"),
         h4("Observation points indicate sectors invaded, so that the area affected can be calculated based on these simulated values.
            These values were similuted for demonstration purposes only. In the future, models like CLIMEX will provided estimates of the
            unticipated maximum spread of invasive species in the absence of management, after a length of time."),  
         plotOutput("map",width = "500px", height = "400px"),
 
-        h3("Predicted area maximum invasion (millions of ha):"),
-        textOutput("area")
+        h3("Simulated area of maximum invasion is ", strong(textOutput("area", inline = TRUE)), "in millions of ha." )
+        
+)# end second column
+)# end first row        
 ),#end biology inputs and map
 
 #################################################################### 
-tabPanel("Eradication Costs",
+tabPanel("Eradication costs",
          # Application title
          titlePanel("Theoretical cost estimation for empirical plant eradication scenarios"),
          p("Evidence-based cost-efficiency estimates for plant eradication programs based on the models of Hester et. al. (2013) and Dodd et. al. (2015)"),
@@ -156,7 +170,7 @@ tabPanel("Eradication Costs",
 ),#end aaron 
 ####################################################################
 tabPanel("Monetised damages", 
-        ##!!!!TEMP
+        fluidRow(column(4,  
         h3("Enter values"), 
         numericInput("tree", "The cost of removing and replacing trees, (AUD/ha/year) ", 0,
                                    0, 1000, 10),
@@ -164,22 +178,46 @@ tabPanel("Monetised damages",
                              0, 1000, 10),
         sliderInput("house", "Reduction in house prices, %", 0, 1,
                                      0.1, 0.05),
-        sliderInput("agri", "Reduction in agricultural revenues, %", 0, 1,
-                            0.1, 0.05),
-        h3("Total value of agricultural production at risk (mil AUD)"),
-        textOutput("agri_value"),
-        radioButtons("type_industry", "Type affected", 
-                     c("Broadacre cereal and non-cereal crops","Hay and silage","Flower and nurseries","Fruit and nuts", 
-                       "Vegatables for human consumption", "Livestock products")),
         sliderInput("tourism", "Reduction in tourism revenues, %", 0, 1,
-                            0.1, 0.05)
-                
+                    0.1, 0.05)
+        ),# end first column 
+        column(8,
+        h3("Total value of agricultural production at risk", strong(textOutput("agri_value",inline = TRUE)),
+           "millions of Australian dollars."),br(),
+        h3("Select types of agricultural production at risk from selected pest:"),
+        checkboxInput("broadacre_impact", "Broadacre cereal and non-cereal crops", value = TRUE),
+        checkboxInput("hay_impact", "Hay and silage", value = TRUE),
+        checkboxInput("flower_impact", "Flower and nurseries", value = TRUE),
+        checkboxInput("fruit_impact", "Fruit and nuts", value = TRUE),
+        checkboxInput("veg_impact", "Vegatables for human consumption", value = TRUE),
+        checkboxInput("livestock_impact", "Livestock products", value = TRUE),
+        sliderInput("agri_percent_damage", "Reduction in agricultural revenues, %", 0, 1,
+                    0.1, 0.05),
+        h3("Total damage to agricultural production", strong(textOutput("agri_value_damage", inline = TRUE)),
+           "millions of Australian dollars.")
+)# end second column
+)# end first row        
+       
 ),#end model inputs market
 
 ####################################################################
 tabPanel("Non-monetised damages",
-         ##!!!!TEMP
-         h3("ACERA 1002")
+ 
+         h3("Amenity, based on ACERA 1002"),
+         br(),
+         tags$ul("Community Stability (includes employment/displacement effects)"),
+         tags$ul("Spiritual Values"), 
+         tags$ul("Aesthetics (landscapes, views, waterways)"),
+         tags$ul("Recreational, leisure, cultural activities"), 
+         tags$ul("Personal loss of freedom, impacts on mobility, choices, usually from management actions"),  
+         tags$ul("Fear and worry, perceptions of risk, not necessarily supported by evidence"),
+         br(),
+         sliderInput("amenity", "Negative impact on amenity, higher score values represent worse damage", 
+                     0, 100, 30, 5),
+         br(),
+         h3("A proxy for environmental damage measured in terms of key native species, based on ACERA 1002"),
+         sliderInput("environment", "Proportion of listed native species affected", 0, 100,
+                     30, 5)
          
 
 ),#end model inputs non-market 
@@ -202,11 +240,13 @@ tabPanel("Model inputs: weighting",
 ),#end model inputs weighting     
 
 ####################################################################
-tabPanel("Management Utility",
-         titlePanel("Predicted effectiveness combined with a chance of successful implementation"),
-         h1("A template for expert elicitations"),
-         br(),
-         h3("Rate the potential impact of the management measure
+tabPanel("Management utility",
+         h1("Predicted effectiveness of measures combined with a chance of successful implementation", 
+            align = "center"),
+ 
+fluidRow(column(6,        
+                
+        h3("Rate the potential impact of the management measure
             on the success of achieving management objectives
             assuming full implementation"), 
          selectInput("score_1", "Management Impact", c("Very Good",
@@ -214,30 +254,35 @@ tabPanel("Management Utility",
                                                        "Poor","Very Poor")),
          h3("Express your uncertainty in such rating"), 
          selectInput("unc_1", "Uncertainty", c("VL","L","M","H")),
-         imageOutput("image1", width = "50%"),
-         
+         imageOutput("image1", width = "60%")
+),
+column(6,         
          h3("Rate the chances of the full implementation of 
             the management measure bearing in mind technical, 
-            economic, labour constraints, etc"), 
+            economic, labour constraints, etc", offset = -1), 
          selectInput("score_2", "Implementation Feasibility", c("Very Good",
                                                                 "Good","Medium",
                                                                 "Poor","Very Poor")),
          h3("Express your uncertainty about this rating"), 
          selectInput("unc_2", "Uncertainty", c("VL","L","M","H")),
-         imageOutput("image2", width = "50%"),
-         
-         br(),
-         h1("Calculating management measure utility"), 
+         imageOutput("image2", width = "60%")
+)),
+fluidRow(column(6,          
+         h1("Calculating management measure utility", align = "center"), 
          br(),
          h3("Management measure utility is calculated using the 'Matrix Method' of combining
-            distributions, described in "),
-         h3(tags$a(href= "http://onlinelibrary.wiley.com/doi/10.1111/risa.12089/abstract", 
-                   "Holt et al. 2013")),
-         br(),
+            distributions, described in ", strong(tags$a(href= "http://onlinelibrary.wiley.com/doi/10.1111/risa.12089/abstract", 
+                                                          "Holt et al. 2013")),
+            align = "center")
+
+),
+column(6,
+
          h3("The distribution below represents the utility of a proposed measure based on its
-            believed impact on the objectives and a possibility of succesful implementation"),
+            believed impact on the objectives and a possibility of succesful implementation", align = "center"),
          br(),   
-         imageOutput("image3", width = "50%")
+         imageOutput("image3", width = "60%")
+))         
 ),#end management utility 
 
 ####################################################################        

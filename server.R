@@ -44,18 +44,19 @@ long_obs<-array()
 col_obs<-array()
 
 col_sp<-colorRampPalette(brewer.pal(7,"Dark2"))(length(pests_ref$Name))
+col_sp_ranked<-colorRampPalette(brewer.pal(9,"YlOrRd"))(length(pests_ref$Name))
 
 nobs<-round(runif(20,1,100))
 for (i in 1:length(pests_ref$Name))
 {
         names_obs<-c(names_obs,rep(pests_ref$Name[i],nobs[i]))
         #Simulate latitude
-        mu_lat<-rnorm(1,-26,3)
-        sd_lat<-rnorm(1,2,0.5)
+        mu_lat<-rnorm(1,-26,2.5)
+        sd_lat<-rnorm(1,1.5,0.5)
         lat_obs<-c(lat_obs,rnorm(nobs[i],mu_lat,sd_lat))
         #Simulate longitude
-        mu_long<-rnorm(1,136,7)
-        sd_long<-rnorm(1,4,0.5)
+        mu_long<-rnorm(1,136,6)
+        sd_long<-rnorm(1,3,0.5)
         long_obs<-c(long_obs,rnorm(nobs[i],mu_long,sd_long))
         
         col_obs<-c(col_obs, rep(col_sp[i],nobs[i]))
@@ -115,7 +116,11 @@ output$map <- renderPlot({
                 typeSp<-reactive(input$species)  
                 dataMap<-subset(data, data$species== typeSp())
                 map("worldHires","Australia", xlim=c(105,155), ylim=c(-45,-10), col="gray90", fill=TRUE)
-                with(dataMap,points(longitude,latitude,pch=21,col=colour[1],bg=colour[1],cex=3))
+                x<-col2rgb(dataMap$colour[1], alpha = FALSE)
+                with(dataMap,points(longitude,latitude,pch=22,
+                                    col=rgb(x[1,],x[2,],x[3,], 100, maxColorValue = 255),
+                                    bg=rgb(x[1,],x[2,],x[3,],100, maxColorValue = 255),cex=4))
+                
 }) #end map
 
 
@@ -133,6 +138,17 @@ output$agri_value<-renderText({Broadacre+
         Fruit+
         Veg+
         Livestock
+}) 
+
+output$agri_value_damage<-renderText({
+        
+        total_agri_damage<-reactive((Broadacre*input$broadacre_impact+
+                Hay*input$hay_impact+
+                Flower*input$flower_impact+
+                Fruit*input$fruit_impact+
+                Veg*input$veg_impact+
+                Livestock*input$livestock_impact)*input$agri_percent_damage)
+        total_agri_damage()
 }) 
 ####################################################################
 ##!!!!TEMP
@@ -176,12 +192,13 @@ output$agri_value<-renderText({Broadacre+
                   df$costM1[i]<-costUnit1()*nobs[i]*ha_per_Obs     
           }
                   
+          df <- transform(df, species = reorder(species, costM1))
           
-         p1<-ggplot(df, aes(species, costM1)) + geom_bar(stat = "identity", fill = col_sp)+
+          p1<-ggplot(df, aes(species, costM1)) + geom_bar(stat = "identity", fill = col_sp_ranked)+
                   ggtitle("Economic cost") +
                   ylab("Millions")+ theme(axis.title.x=element_blank())+
                   theme(axis.text.x = element_text(angle = 90, hjust = 0.5))+
-                  scale_fill_manual(values=col_sp, name="Species", labels=pests_ref$Name)
+                  scale_fill_manual(values=col_sp_ranked, name="Species", labels=pests_ref$Name)
           
           print(p1)
 }) #end ranking model 1
@@ -200,12 +217,12 @@ output$agri_value<-renderText({Broadacre+
                   df$costM2[i]<-costUnit2()*nobs[i]*ha_per_Obs     
           }
           
-          
-          p2<-ggplot(df, aes(species, costM2)) + geom_bar(stat = "identity", fill = col_sp)+
+          df <- transform(df, species = reorder(species, costM2))
+          p2<-ggplot(df, aes(species, costM2)) + geom_bar(stat = "identity", fill = col_sp_ranked)+
                   ggtitle("Economic cost") +
                   ylab("Millions")+ theme(axis.title.x=element_blank())+
                   theme(axis.text.x = element_text(angle = 90, hjust = 0.5))+
-                  scale_fill_manual(values=col_sp, name="Species", labels=pests_ref$Name)
+                  scale_fill_manual(values=col_sp_ranked, name="Species", labels=pests_ref$Name)
           
           print(p2)
  }) #end ranking model 2          
