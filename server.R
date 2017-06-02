@@ -88,12 +88,16 @@ Livestock<-8127
 ##!!!!TEMP
 #Making up costs for two economic models
 marketCostM1<-10
-nonmarketCostM1<-30
-marketCostM2<-30
+nonmarketCostM1<-20
+marketCostM2<-15
 nonmarketCostM2<-5
+envCostM1<-7
+envCostM2<-9
+
 n<-20
 ymax<-n*2*ha_per_Obs*(max(marketCostM1,marketCostM2)+max(nonmarketCostM1,nonmarketCostM2))
-
+df<-data.frame(species= pests_ref$Name, costM1 = c(1:length(pests_ref$Name)),
+               costM2 = c(1:length(pests_ref$Name)))
 ####################################################################
 #Server function, code below is ran for every app user
 shinyServer(function(input, output) {
@@ -132,12 +136,12 @@ output$area<-renderText({
         length(dataMap[,1])*ha_per_Obs
 })  
 
-output$agri_value<-renderText({Broadacre+
+output$agri_value<-renderText({signif(Broadacre+
         Hay+
         Flower+
         Fruit+
         Veg+
-        Livestock
+        Livestock, digits = 3)
 }) 
 
 output$agri_value_damage<-renderText({
@@ -148,55 +152,38 @@ output$agri_value_damage<-renderText({
                 Fruit*input$fruit_impact+
                 Veg*input$veg_impact+
                 Livestock*input$livestock_impact)*input$agri_percent_damage)
-        total_agri_damage()
+        signif(total_agri_damage(), digits = 3)
 }) 
-####################################################################
-##!!!!TEMP
- model1pred <- reactive({
-         
-          costUnit<-0+marketCostM1*input$market+nonmarketCostM1*input$nonmarket
-          typeSp<-reactive(input$species)
-          dataMap<-subset(data, data$species== typeSp())
-          cost<-costUnit*length(dataMap[,1])*ha_per_Obs+dataMap$damage[1]
-         })
-  
-  model2pred <- reactive({
-          costUnit<-0+marketCostM2*input$market+nonmarketCostM2*input$nonmarket
-          
-          typeSp<-reactive(input$species)
-          dataMap<-subset(data, data$species== typeSp())
-          cost<-costUnit*length(dataMap[,1])*ha_per_Obs+dataMap$damage[1]
-          })
-  
- output$costModel1 <- renderText({
-         model1pred()
-  })
-  
-  output$costModel2 <- renderText({
-          model2pred()
-  })
+
 #################################################################### 
  ##!!!!TEMP 
  output$rank1 <- renderPlot({
           
-          df<-data.frame(species= pests_ref$Name, costM1 = c(1:length(pests_ref$Name)),
-                         costM2 = c(1:length(pests_ref$Name)))
-          
           costUnit1 <- reactive({
-                  costUnit<-0+marketCostM1*input$market+nonmarketCostM1*input$nonmarket
+                  costUnit<-input$weight_env*envCostM1*input$native_species+
+                          input$weight_econ*marketCostM1*input$market+
+                          input$weight_amen*nonmarketCostM1*input$nonmarket
           })
           
-
+          costUnit2 <- reactive({
+                  costUnit<-input$weight_env*envCostM2*input$native_species+
+                          input$weight_econ*marketCostM2*input$market+
+                          input$weight_amen*nonmarketCostM2*input$nonmarket
+          })
+          
           for (i in 1:length(pests_ref$Name))
           {
-                  df$costM1[i]<-costUnit1()*nobs[i]*ha_per_Obs     
+                  df$costM1[i]<-costUnit1()*nobs[i]*ha_per_Obs 
+                  df$costM2[i]<-costUnit2()*max(1,rnorm(1,nobs[i],5))*ha_per_Obs     
           }
-                  
+         
+                 
           df <- transform(df, species = reorder(species, costM1))
           
           p1<-ggplot(df, aes(species, costM1)) + geom_bar(stat = "identity", fill = col_sp_ranked)+
-                  ggtitle("Economic cost") +
-                  ylab("Millions")+ theme(axis.title.x=element_blank())+
+                  ggtitle("Prioritisation of invasive species") +
+                  scale_y_continuous(limits = c(0, max(df$costM1,df$costM2)))+
+                  ylab("Utility")+ theme(axis.title.x=element_blank())+
                   theme(axis.text.x = element_text(angle = 90, hjust = 0.5))+
                   scale_fill_manual(values=col_sp_ranked, name="Species", labels=pests_ref$Name)
           
@@ -205,22 +192,31 @@ output$agri_value_damage<-renderText({
   
  output$rank2 <- renderPlot({
           
-         df<-data.frame(species= pests_ref$Name, costM1 = c(1:length(pests_ref$Name)),
-                        costM2 = c(1:length(pests_ref$Name)))
- 
-          costUnit2 <- reactive({
-                  costUnit<-0+marketCostM2*input$market+nonmarketCostM2*input$nonmarket
-          })
-          
-          for (i in 1:length(pests_ref$Name))
-          {
-                  df$costM2[i]<-costUnit2()*nobs[i]*ha_per_Obs     
-          }
-          
-          df <- transform(df, species = reorder(species, costM2))
+
+         
+         costUnit1 <- reactive({
+                 costUnit<-input$weight_env*envCostM1*input$native_species+
+                         input$weight_econ*marketCostM1*input$market+
+                         input$weight_amen*nonmarketCostM1*input$nonmarket
+         })
+         
+         costUnit2 <- reactive({
+                 costUnit<-input$weight_env*envCostM2*input$native_species+
+                         input$weight_econ*marketCostM2*input$market+
+                         input$weight_amen*nonmarketCostM2*input$nonmarket
+         })
+         
+         for (i in 1:length(pests_ref$Name))
+         {
+                 df$costM1[i]<-costUnit1()*nobs[i]*ha_per_Obs 
+                 df$costM2[i]<-costUnit2()*max(1,rnorm(1,nobs[i],5))*ha_per_Obs     
+         }
+         
+          df <- transform(df, species = reorder(species, costM1))
           p2<-ggplot(df, aes(species, costM2)) + geom_bar(stat = "identity", fill = col_sp_ranked)+
-                  ggtitle("Economic cost") +
-                  ylab("Millions")+ theme(axis.title.x=element_blank())+
+                  ggtitle("Prioritisation of invasive species") +
+                  scale_y_continuous(limits = c(0, max(df$costM1,df$costM2)))+
+                  ylab("Utility")+ theme(axis.title.x=element_blank())+
                   theme(axis.text.x = element_text(angle = 90, hjust = 0.5))+
                   scale_fill_manual(values=col_sp_ranked, name="Species", labels=pests_ref$Name)
           
@@ -470,24 +466,24 @@ dataInput <- reactive({
          
          # render the cost outputs for the ui
          output$cost_tab <- renderTable(
-                 cbind(Activity, Cost=comma(Cost), Percentage=percent(Percentage)))
+                 cbind(Activity, Cost=signif(Cost, digits = 3), Percentage=percent(Percentage)))
          
-         output$cost <- renderText({comma(v_TC)})
+         output$cost <- renderText({signif(v_TC/10^6, digits = 3)})
          
          # construct a results table
          res_df <- data.frame("Prob"=CDF[,1], "Infested"=vec_Ht, "Active"=vec_At, "Cost"=vec_TC, "time"=c(0:(length(vec_TC)-1)))
          
          # Calculate summary statistics and render them to the ui
          Cost_Erad <- sum(res_df$Cost[1:v_DH])     # Cost of Eradication | time
-         output$costtime <- renderText({comma(Cost_Erad)})
+         output$costtime <- renderText({signif(Cost_Erad, digits = 3)})
          
          Pr_Erad <- res_df$Prob[v_DH]              # Probability of Eradication | Time
-         output$prob <- renderText({Pr_Erad})
+         output$prob <- renderText({signif(Pr_Erad, digits = 3)})
          
          Cost_Eff <- (Pr_Erad*1000000) / Cost_Erad # Cost-Effectiveness
-         output$costeff <- renderText({Cost_Eff})
+         output$costeff <- renderText({signif(Cost_Eff, digits =3)})
          
-         output$horizon <- renderText({v_DH})      # Time horizon
+         output$horizon <- renderText({signif(v_DH,digits=3)})      # Time horizon
          
          output$PFA <- renderText({v_Pfa})         # PFA (used for debugging)
          output$PFM <- renderText({v_Pfm})         # PFM (used for debugging) 
