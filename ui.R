@@ -299,6 +299,11 @@ tabPanel("Non-monetised damages",
 tabPanel("Management utility",
          h1("Predicted effectiveness of measures combined with a chance of successful implementation", 
          align = "left"),
+         br(),
+         h4("Management measure utility is calculated using the 'Matrix Method' of combining
+                        distributions, described in ", strong(tags$a(href= "http://onlinelibrary.wiley.com/doi/10.1111/risa.12089/abstract", 
+                                                                     "Holt et al. 2013")),align = "left"),
+         
  
         fluidRow(column(6,        
                 
@@ -324,22 +329,14 @@ tabPanel("Management utility",
                         imageOutput("image2", width = "60%")
                 )
         ),
-        fluidRow(column(6,          
-                        h1("Calculating management measure utility", align = "left"), 
-                        br(),
-                        h3("Management measure utility is calculated using the 'Matrix Method' of combining
-                        distributions, described in ", strong(tags$a(href= "http://onlinelibrary.wiley.com/doi/10.1111/risa.12089/abstract", 
-                                                "Holt et al. 2013")),align = "left")
-
-                ),
-                column(6,
-
-                        h3("The distribution below represents the utility of a proposed measure based on its
-                        believed impact on the objectives and a possibility of succesful implementation", align = "left"),
-                        br(),   
-                        imageOutput("image3", width = "60%")
-                )
-        )         
+        fluidRow(column(4), column(4, 
+                                HTML('<img src="arrow.jpg" width="20%">'),
+                                h3("Combine Distributions", align = "center"),
+                                imageOutput("image3", width = "90%"),
+                                h4("The distribution above represents the utility of a proposed measure based on its
+                                believed impact on the objectives and a possibility of succesful implementation", align = "left")
+                                )
+                )         
 ),#end management utility 
 
 ####################################################################        
