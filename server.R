@@ -98,62 +98,78 @@ n<-20
 ymax<-n*2*ha_per_Obs*(max(marketCostM1,marketCostM2)+max(nonmarketCostM1,nonmarketCostM2))
 df<-data.frame(species= pests_ref$Name, costM1 = c(1:length(pests_ref$Name)),
                costM2 = c(1:length(pests_ref$Name)))
+
+
+
+
 ####################################################################
+
 #Server function, code below is ran for every app user
 shinyServer(function(input, output) {
 
-####################################################################        
-#Display the picture of the species of interest     
-output$species_photo <- renderImage({
-                #Select species 
-                typeSp<-reactive(input$species)  
-                src_image<-subset(pests_ref, pests_ref$Name==typeSp())[[3]]
-                srcI<-paste("www/", src_image,sep="")
-                return(list(src = srcI, filetype = "image/jpeg",alt = "Pest"))
-}, deleteFile = FALSE) #end select picture
+        ####################################################################        
+        #Display the picture of the species of interest     
+        output$species_photo <- renderImage({
+                                #Select species 
+                                typeSp<-reactive(input$species)  
+                                src_image<-subset(pests_ref, pests_ref$Name==typeSp())[[3]]
+                                srcI<-paste("www/", src_image,sep="")
+                                return(list(src = srcI, filetype = "image/jpeg",alt = "Pest"))
+                                }, deleteFile = FALSE) #end select picture
         
 
-####################################################################         
-#Map species 
-output$map <- renderPlot({
-                #Select species 
-                typeSp<-reactive(input$species)  
-                dataMap<-subset(data, data$species== typeSp())
-                map("worldHires","Australia", xlim=c(105,155), ylim=c(-45,-10), col="gray90", fill=TRUE)
-                x<-col2rgb(dataMap$colour[1], alpha = FALSE)
-                with(dataMap,points(longitude,latitude,pch=22,
+        ####################################################################         
+        #Map showing maximum range of invasive species 
+        output$map <- renderPlot({
+                                #Select species 
+                                typeSp<-reactive(input$species)  
+                                dataMap<-subset(data, data$species== typeSp())
+                                map("worldHires","Australia", xlim=c(105,155), ylim=c(-45,-10), col="gray90", fill=TRUE)
+                                x<-col2rgb(dataMap$colour[1], alpha = FALSE)
+                                with(dataMap,points(longitude,latitude,pch=22,
                                     col=rgb(x[1,],x[2,],x[3,], 100, maxColorValue = 255),
                                     bg=rgb(x[1,],x[2,],x[3,],100, maxColorValue = 255),cex=4))
-                
-}) #end map
-
-
-#################################################################### 
-output$area<-renderText({
-        #Select species 
-        typeSp<-reactive(input$species)
-        dataMap<-subset(data, data$species== typeSp())
-        length(dataMap[,1])*ha_per_Obs
-})  
-
-output$agri_value<-renderText({signif(Broadacre+
-        Hay+
-        Flower+
-        Fruit+
-        Veg+
-        Livestock, digits = 3)
-}) 
-
-output$agri_value_damage<-renderText({
+                                }) #end map
+        ####################################################################         
+        #Message that goes with the map
+        observeEvent(input$show, {
+                showModal(modalDialog(
+                                title = "Illustration Only",
+                                p("Observation points indicate sectors invaded, so that the area affected can be calculated based on these simulated values.
+                                These values were similuted for demonstration purposes only. In the future, models like CLIMEX will provided estimates of the
+                                unticipated maximum spread of invasive species in the absence of management, after a length of time.",  align= "center"),
+                                easyClose = TRUE,
+                                footer = NULL
+                        ))
+                })
+        #################################################################### 
+        #Calculate the area invaded
+        output$area<-renderText({
+                                #Select species 
+                                typeSp<-reactive(input$species)
+                                dataMap<-subset(data, data$species== typeSp())
+                                length(dataMap[,1])*ha_per_Obs
+                                })  
         
-        total_agri_damage<-reactive((Broadacre*input$broadacre_impact+
-                Hay*input$hay_impact+
-                Flower*input$flower_impact+
-                Fruit*input$fruit_impact+
-                Veg*input$veg_impact+
-                Livestock*input$livestock_impact)*input$agri_percent_damage)
-        signif(total_agri_damage(), digits = 3)
-}) 
+        #################################################################### 
+        #Calculate the total value of agricultural production at risk
+        output$agri_value<-renderText({signif(Broadacre+
+                                Hay+Flower+Fruit+Veg+Livestock, digits = 3)
+                                }) 
+        
+        #################################################################### 
+        #Calculate the total value of agricultural production at risk
+        output$agri_value_damage<-renderText({
+                                total_agri_damage<-reactive(
+                                        Broadacre*input$broadacre_impact*input$broadacre_percent_damage+
+                                        Hay*input$hay_impact*input$hay_percent_damage+
+                                        Flower*input$flower_impact*input$flower_percent_damage+
+                                        Fruit*input$fruit_impact*input$fruit_percent_damage+
+                                        Veg*input$veg_impact*input$veg_percent_damage+
+                                        Livestock*input$livestock_impact*input$livestock_percent_damage)
+                                
+                                signif(total_agri_damage(), digits = 3)
+                                }) 
 
 #################################################################### 
  ##!!!!TEMP 

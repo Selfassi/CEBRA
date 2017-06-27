@@ -1,11 +1,11 @@
 name: Test
-title: Test
+title: CEBRA
 account: pl202
 server: shinyapps.io
 appId: 183415
-bundleId: 849740
+bundleId: 884083
 url: https://pl202.shinyapps.io/Test/
-when: 1496359854.89899
+when: 1498576722.75422
 asMultiple: FALSE
 asStatic: FALSE
 ignoredFiles: SimulatingSpatialData.R
