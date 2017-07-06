@@ -13,7 +13,24 @@ require(MASS)
 library(scales)
 library(gtable)
 library(grid)
+library(googlesheets)
 
+table <- "Cebra"
+
+saveDataG <- function(data) {
+        # Grab the Google Sheet
+        sheet <- gs_title(table)
+        # Add the data as a new row
+        gs_add_row(sheet, ws = 1, input = data, verbose = TRUE)
+        #gs_add_row(sheet, input = data)
+}
+
+loadDataG <- function() {
+        # Grab the Google Sheet
+        sheet <- gs_title(table)
+        # Read the data
+        gs_read_csv(sheet)
+}
 # Load the pre-sampled random variables (sampling them on the fly slows the app down substantially)
 load("data/sims.df.RData")
 
@@ -156,21 +173,35 @@ shinyServer(function(input, output) {
         output$agri_value<-renderText({signif(Broadacre+
                                 Hay+Flower+Fruit+Veg+Livestock, digits = 3)
                                 }) 
+        #################################################################### 
+        #Calculate the total damage to agricultural production 
+        total_agri_damage<-reactive(
+                        Broadacre*input$broadacre_impact*input$broadacre_percent_damage+
+                        Hay*input$hay_impact*input$hay_percent_damage+
+                        Flower*input$flower_impact*input$flower_percent_damage+
+                        Fruit*input$fruit_impact*input$fruit_percent_damage+
+                        Veg*input$veg_impact*input$veg_percent_damage+
+                        Livestock*input$livestock_impact*input$livestock_percent_damage)
         
         #################################################################### 
         #Calculate the total value of agricultural production at risk
         output$agri_value_damage<-renderText({
-                                total_agri_damage<-reactive(
-                                        Broadacre*input$broadacre_impact*input$broadacre_percent_damage+
-                                        Hay*input$hay_impact*input$hay_percent_damage+
-                                        Flower*input$flower_impact*input$flower_percent_damage+
-                                        Fruit*input$fruit_impact*input$fruit_percent_damage+
-                                        Veg*input$veg_impact*input$veg_percent_damage+
-                                        Livestock*input$livestock_impact*input$livestock_percent_damage)
-                                
                                 signif(total_agri_damage(), digits = 3)
                                 }) 
 
+        ####################################################################        
+        #Record responses for each time 'submit' is clicked 
+        observe({
+                if(input$submit==0) return(NULL)
+                isolate({
+                        data<-data.frame(t(c(input$name,input$species, total_agri_damage(), 
+                                             input$amenity,input$environment, input$timescale)))
+                        colnames(data)<-c("Name","Species", "Agri_Damage", "Amenity", "Environment", "Timescale")
+                        saveDataG(data[1,])
+                        
+                })
+        })
+        
 #################################################################### 
  ##!!!!TEMP 
  output$rank1 <- renderPlot({

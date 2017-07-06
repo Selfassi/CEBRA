@@ -13,19 +13,14 @@ shinyUI(navbarPage(
 tags$head(tags$link(rel = "stylesheet", type = "text/css", href = "bootstrap.css")), #end css style set up 
 
 tags$head(tags$style("
-      .head_row{height:70px;background-color: #1B9E77; color: white;}"
+        .head_row{height:70px;background-color: #1B9E77; color: white;}
+        .time_box{background-color:  #7570B3; color: white;}
+        .mid_row{height:35px;background-color: #666666;}
+        .black_font{color: black;}
+        "
 )
 ),
 
-tags$head(tags$style("
-      .time_box{background-color:  #7570B3; color: white;}"
-)
-),
-
-tags$head(tags$style("
-      .mid_row{height:35px;background-color: #666666;}"
-)
-),
 
 css <- "#large .selectize-input { line-height: 40px; }
         #large .selectize-dropdown { line-height: 30px; }",
@@ -48,7 +43,7 @@ fluidRow(
                 
                 imageOutput("species_photo")
         ),# end first column 
-        column(5,
+        column(4,
                 h3("Map indicating simulated maximum range of selected species:"),
                
                 h3("Simulated area of maximum invasion is ", 
@@ -57,10 +52,16 @@ fluidRow(
                 plotOutput("map"),
                 actionButton("show", "Exlanatory note")
         ),# end second column
-        column(2, br(),br(), br(), br(),br(), br(),
+        column(1),
+        column(2, br(),br(), br(),
                 wellPanel(class= "time_box",
-                        h3("How quickly can the maximum range be reached?"),
-                        selectInput("timescale", h4("Time horizon"), c("< 10 years","< 30 years", "< 100 years"))
+                        h4("How quickly can the maximum range be reached?"),
+                        selectInput("timescale", h4("Time horizon"), c("< 10 years","< 30 years", "< 100 years")),
+                        textInput("name", h4("Please enter your name or initials")),
+                        br(),
+                        h4("Record all of your answers for each species after visiting the tabs"), 
+                        actionButton("submit", strong("Submit"), align = "center")
+                        
                 )
                 
       
@@ -126,7 +127,7 @@ fluidRow(column(6,
                 tags$li("Model management/damage (market) costs as linear in space and time"),
                 br(),
                 h3("Rank 20 species as a demo"),
-                tags$p("Use the app to demonstrate how ranking will change depending on the weights given to business, amenity and environment,
+                tags$p("Use the app to demonstrate how ranking will change depending on the weights given to business, amenity and                            environment,
                        as well as methodology chosen for combining these effects.")
                 )# end second column
 )# end first row
