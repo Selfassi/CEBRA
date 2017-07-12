@@ -1,0 +1,132 @@
+---
+title: "CEBRA"
+author: "PL"
+date: "11/07/2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(sp)
+library(leaflet)
+library(rgeos)
+library(plyr)
+```
+
+## Summary
+
+This documents the data, the code and the process behind the CEBRA app.
+
+
+## Data
+
+```{r wd}
+getwd()
+
+```
+
+The data on the boundaries of regions in Australia comes from [Global Administrative Areas](http://www.gadm.org/download). Select Australia, and choose Level 2 file, which is the largest file.
+Dowload AUS_adm2.rds into your home directory, it is in the "R SpatialPolygonsDataFrame" format and uses "sp" package. Loading and ploting the data takes a while.
+
+Use a specific type of projection in order to calculate the area consistently [proj4js](http://spatialreference.org/ref/sr-org/australia-albers-equal-area-conic-134/proj4js/) in square meters. I validated that this projection method works with "gArea" using East Pilbara Shire which has an area of about 380,000 km².
+
+```{r data_step1}
+#Read the file with regional boundaries into a var "Aust"
+Aust<-readRDS("AUS_adm2.rds")
+
+#Transform the coord system to a specific type which will be useful later
+proj_Aust<-"+proj=aea +lat_1=-18 +lat_2=-36 +lat_0=0 +lon_0=134 +x_0=0 +y_0=0 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"
+
+#Generic projection
+proj<- "+proj=longlat +datum=WGS84"
+
+Aust <- spTransform(Aust, CRS(proj_Aust))
+#Check the plot
+#plot(Aust)
+
+#Add a data column with area calculated by gArea in m^2
+Aust@data<-mutate(Aust@data, AREA=gArea(Aust,byid=TRUE))
+
+#Add a data column with area in millions of ha
+Aust@data<-mutate(Aust@data, AREA_mil_ha=AREA/10000000000)
+
+#Look at the top 3 of our subset of regions
+head(Aust@data[order(-Aust@data$AREA),], 3)
+
+#Look at the names of the 10 largest by area regions 
+unique(Aust@data[order(-Aust@data$AREA),][1:10,][,"NAME_2"])
+```
+
+### Subsetting the regional data
+
+There are various ways to subset the regional data, for example by name, by area and by geographical location.The code below finds the names of the administrative regions that lie within four boxes defined by latitude and longitude. 
+
+We first define a matrix of coordinates for the box, then turn it into an R object of the "SpatialPolygonsDataFrame" class, with the the same projection method (CRS) as "Aust", so that we can use the function "over" to create an index indicating the overlap between the box and administrative regions. Based on that index, we create a list of names for the regions near the coasts. 
+
+The slight complication is that we define the boxes in one global projection system, and then translate them into the Australia specific one, using "spTransform".
+
+```{r data_step2}
+#Find the regions in the box
+boxSW<-cbind(c(114,114,120,120,114),c(-31,-36,-36,-31,-31))
+p = Polygon(boxSW)
+ps = Polygons(list(p), 1)
+sps = SpatialPolygons(list(ps))
+proj4string(sps) = CRS(proj)
+sps = spTransform(sps, CRS(proj_Aust))
+data = data.frame(f=99.9)
+spdf = SpatialPolygonsDataFrame(sps,data)
+indexSW<-over(Aust, spdf)
+regionsSW<-unique(Aust@data[!is.na(indexSW),]$NAME_2)
+
+boxSE<-cbind(c(138,138,150,150,138),c(-36,-48,-48,-36,-36))
+p = Polygon(boxSE)
+ps = Polygons(list(p), 1)
+sps = SpatialPolygons(list(ps))
+proj4string(sps) = CRS(proj)
+sps = spTransform(sps, CRS(proj_Aust))
+data = data.frame(f=99.9)
+spdf = SpatialPolygonsDataFrame(sps,data)
+indexSE<-over(Aust, spdf)
+regionsSE<-unique(Aust@data[!is.na(indexSE),]$NAME_2)
+
+
+boxEast<-cbind(c(146,146,155,155,146),c(-36,-18,-18,-36,-36))
+p = Polygon(boxEast)
+ps = Polygons(list(p), 1)
+sps = SpatialPolygons(list(ps))
+proj4string(sps) = CRS(proj)
+sps = spTransform(sps, CRS(proj_Aust))
+data = data.frame(f=99.9)
+spdf = SpatialPolygonsDataFrame(sps,data)
+indexEast<-over(Aust, spdf)
+regionsEast<-unique(Aust@data[!is.na(indexEast),]$NAME_2)
+
+boxNorth<-cbind(c(132,132,155,155,132),c(-12,-18,-18,-12,-12))
+p = Polygon(boxNorth)
+ps = Polygons(list(p), 1)
+sps = SpatialPolygons(list(ps))
+proj4string(sps) = CRS(proj)
+sps = spTransform(sps, CRS(proj_Aust))
+data = data.frame(f=99.9)
+spdf = SpatialPolygonsDataFrame(sps,data)
+indexNorth<-over(Aust, spdf)
+regionsNorth<-unique(Aust@data[!is.na(indexNorth),]$NAME_2)
+
+```
+
+Now that we have names of the regions from which we want to simulate pest invasion and industry data, we can subset the "Aust" object to focus on those regions.
+
+```{r data_step3}
+
+Aust_Coast <-subset(Aust,(Aust@data[,"NAME_2"] %in% regionsSW)|(Aust@data[,"NAME_2"] %in% regionsSE)|
+                           (Aust@data[,"NAME_2"] %in% regionsEast)|(Aust@data[,"NAME_2"] %in% regionsNorth))
+
+#To see the map of the selected regions
+leaflet(data = spTransform(Aust_Coast,CRS(proj))) %>% addPolygons()
+
+```
+
+### Populating the  dataframe with real data
+
+The first step is to populate regions with statistics on population. Dowload "Population Estimates by Age and Sex, Summary Statistics - Local Government Areas (ASGS 2015), 2015" excel file from [Australian Bureu of Statistics](http://www.abs.gov.au/AUSSTATS/abs@.nsf/DetailsPage/3235.02015?OpenDocument).
+

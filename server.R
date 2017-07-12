@@ -127,12 +127,12 @@ shinyServer(function(input, output) {
         ####################################################################        
         #Display the picture of the species of interest     
         output$species_photo <- renderImage({
-                                #Select species 
                                 typeSp<-reactive(input$species)  
                                 src_image<-subset(pests_ref, pests_ref$Name==typeSp())[[3]]
                                 srcI<-paste("www/", src_image,sep="")
                                 return(list(src = srcI, filetype = "image/jpeg",alt = "Pest"))
-                                }, deleteFile = FALSE) #end select picture
+                                 }, deleteFile = FALSE) #end select picture
+        
         
 
         ####################################################################         
