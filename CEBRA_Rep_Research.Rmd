@@ -6,7 +6,7 @@ output: html_document
 ---
 
 ```{r setup, include=TRUE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
 library(sp)
 library(leaflet)
 library(rgeos)
@@ -17,7 +17,13 @@ library(PBSmapping)
 library(png)
 library(grid)
 library(mapview)
-
+library(dplyr)
+library(utils)
+library(tidyr)
+library(magrittr)
+library(RColorBrewer)
+library(tmap)
+require(lattice)
 ```
 
 ## Summary
@@ -27,70 +33,77 @@ This documents the data, the code and the process behind the CEBRA app.
 
 ## Data
 
-```{r wd}
-getwd()
-```
-
 The data on the boundaries of regions in Australia comes from [Australian Bureau of Statistics](http://www.abs.gov.au/AUSSTATS/abs@.nsf/DetailsPage/1270.0.55.001July%202011?OpenDocument). 
 Dowload "Statistical Area Level 2 (SA2) ASGS Ed 2011 Digital Boundaires in ESRI Shapefile Format" into your home directory. Find more about statistical regions of Australia [here](http://stat.abs.gov.au/itt/r.jsp?ABSMaps).
 
 Use a specific type of projection in order to calculate the area consistently [proj4js](http://spatialreference.org/ref/sr-org/australia-albers-equal-area-conic-134/proj4js/) in square meters. I validated that this projection method works with "gArea" using East Pilbara Shire which has an area of about 380,000 km².
 
-```{r data_step1}
-#Read the file with regional boundaries into a var "Aust"
-#get the data 
-file<-"SA2_2011_AUST.shp"
-Aust<-readOGR(file, GDAL1_integer64_policy = TRUE)
+```{r read_shapefile, eval =TRUE}
+        #Read the file with regional boundaries into a var "Aust"
+        #Get the data 
+        file<-"SA2_2011_AUST.shp"
+        Aust<-readOGR(file, GDAL1_integer64_policy = TRUE)
 
-#Transform the coord system to a specific type which will be useful later
-proj_Aust<-"+proj=aea +lat_1=-18 +lat_2=-36 +lat_0=0 +lon_0=134 +x_0=0 +y_0=0 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"
+        #Transform the coord system to a specific type which will be useful later
+        proj_Aust<-
+        "+proj=aea +lat_1=-18 +lat_2=-36 +lat_0=0 +lon_0=134 +x_0=0 +y_0=0 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"
 
-#Generic projection
-proj<- "+proj=longlat +datum=WGS84"
+        #Generic projection
+        proj<- "+proj=longlat +datum=WGS84"
 
-Aust <- spTransform(Aust, CRS(proj_Aust))
-#Check the plot
-#plot(Aust)
+        Aust <- spTransform(Aust, CRS(proj_Aust))
+        #Check the plot
+        #plot(Aust)
 
-#Add a data column with area calculated by gArea in m^2
-Aust@data<-mutate(Aust@data, AREA=gArea(Aust,byid=TRUE))
+        #Add a data column with area calculated by gArea in m^2, divide by 10000 to get ha
+        Aust@data<-mutate(Aust@data, Area_ha=gArea(Aust,byid=TRUE)/10000)
 
-#Add a data column with area in millions of ha
-Aust@data<-mutate(Aust@data, AREA_mil_ha=AREA/10000000000)
+        #Look at the top 4 rows in order of area 
+        head(Aust@data[order(-Aust@data$Area_ha),], 4)
 
-#Look at the top 3 of our subset of regions
-head(Aust@data[order(-Aust@data$AREA),], 4)
-
-#Look at the names of the 10 largest by area regions 
-unique(Aust@data[order(-Aust@data$AREA),][1:10,][,"SA2_NAME11"])
+        #Look at the names of the 10 largest by area regions 
+        unique(Aust@data[order(-Aust@data$Area_ha),][1:10,][,"SA2_NAME11"])
 ```
 
 
-### Populating the  dataframe with real data
+###  Populating the  dataframe with real data
 
-The first step is to populate regions with statistics on population. Dowload "Population Estimates by Age and Sex, Summary Statistics (ASGS 2011), 2010 and 2015" excel file from [Australian Bureu of Statistics](http://www.abs.gov.au/AUSSTATS/abs@.nsf/DetailsPage/3235.02015?OpenDocument).
+The first step is to populate regions with statistics on population. Dowload "Population Estimates by Age and Sex, Summary Statistics (ASGS 2011), 2010 and 2015" excel file from [Australian Bureau of Statistics](http://www.abs.gov.au/AUSSTATS/abs@.nsf/DetailsPage/3235.02015?OpenDocument).
 
-Extract populations numbers by region from this data file and merge it with "Aust" dataframe. Not every SA2 region has a population entry, but in total about 22 mil are counted.
+Extract populations numbers by region from this data file and merge it with "Aust" dataframe. Not every SA2 region has a population entry, but in total about 22 mil are accounted for, and according to spot check (East Pilbara) and the map seems to have been recorded in the correct regions in the dataframe.
 
-```{r data_pop}
-file<-"32350ds0009_sa2_summary_statistics_2010_2015.xls"
-#read the file
-pop_regions <- read_excel(file, sheet="Table 1", skip=15)[1:3544,c(6,9)] %>% setNames(
+```{r merge_w_pop_data, eval =TRUE}
+        #Name of the file as downloaded 
+        file<-"32350ds0009_sa2_summary_statistics_2010_2015.xls"
+        #Read the file
+        pop_regions <- read_excel(file, sheet="Table 1", skip=15)[1:3544,c(6,9)] %>% setNames(
                                                 c("SA2_NAME11","Population"))
-#get rid of empty rows
-pop_regions<-subset(pop_regions, !is.na(pop_regions$SA2_NAME11))
+        #Get rid of rows without names
+        pop_regions<-subset(pop_regions, !is.na(pop_regions$SA2_NAME11))
 
-#merge population data with regions
-Aust<-merge(Aust, pop_regions, by="SA2_NAME11")
+        #Check classes of columns
+        class(pop_regions$Population)
+        class(pop_regions$SA2_NAME11)
 
-#headcount
-sum(Aust$Population, na.rm = TRUE)
+        #Check that all regions are distinct
+        length(pop_regions$SA2_NAME11)==length(unique(pop_regions$SA2_NAME11))
 
-#plot
-pal_pop<- colorBin(c("white","darkslateblue"), domain= Aust$Population)
+        #Merge population data with regions
+        Aust<-merge(Aust, pop_regions, by="SA2_NAME11")
 
-map_pop<-leaflet(data = spTransform(Aust,CRS(proj))) %>% addProviderTiles("CartoDB.Positron") %>%
-        addPolygons(fillColor = ~pal_pop(Population),  # refers to pal defined above
+        #Check how many people are accounted for
+        sum(Aust$Population, na.rm = TRUE)
+```
+
+Make a map image with the population data.
+
+``` {r make_population_map, eval =FALSE} 
+        #Set eval to false because it takes a while
+        #Plot
+        pal_pop<- colorBin(c("white","darkslateblue"), domain= Aust$Population)
+
+        map_pop<-leaflet(data = spTransform(Aust,CRS(proj))) %>% addProviderTiles("CartoDB.Positron") %>%
+                addPolygons(fillColor = ~pal_pop(Population),  # refers to pal defined above
                     fillOpacity = 0.8, 
                     color = "#BDBDC3", # colour between polygons
                     weight = 1,
@@ -101,12 +114,12 @@ map_pop<-leaflet(data = spTransform(Aust,CRS(proj))) %>% addProviderTiles("Carto
                             fillOpacity = 0.7,
                             bringToFront = TRUE))
 
-mapshot(map_pop, file = "Map_Population.png")
+        mapshot(map_pop, file = "Map_Population.png")
 ```
 
 Show where the population is recorded in the "Aust" dataframe:
 
-```{r fig.width=5, fig.height=5}
+```{r display_pop_map, fig.width=5, fig.height=5}
         img <- readPNG("Map_Population.png")
         grid.raster(img)
 ```
@@ -119,73 +132,515 @@ We first define a matrix of coordinates for the box, then turn it into an R obje
 
 The slight complication is that we define the boxes in one global projection system, and then translate them into the Australia specific one, using "spTransform".
 
-```{r data_step2}
-#Find the regions in the box
-boxSW<-cbind(c(114,114,120,120,114),c(-31,-36,-36,-31,-31))
-p = Polygon(boxSW)
-ps = Polygons(list(p), 1)
-sps = SpatialPolygons(list(ps))
-proj4string(sps) = CRS(proj)
-sps = spTransform(sps, CRS(proj_Aust))
-data = data.frame(f=99.9)
-spdf = SpatialPolygonsDataFrame(sps,data)
-indexSW<-over(Aust, spdf)
-regionsSW<-unique(Aust@data[!is.na(indexSW),]$SA2_NAME11)
+Why are we doing this? In case we want to simulate random but plausible distribution of pests (i.e. near coasts).
 
-boxSE<-cbind(c(138,138,150,150,138),c(-36,-48,-48,-36,-36))
-p = Polygon(boxSE)
-ps = Polygons(list(p), 1)
-sps = SpatialPolygons(list(ps))
-proj4string(sps) = CRS(proj)
-sps = spTransform(sps, CRS(proj_Aust))
-data = data.frame(f=99.9)
-spdf = SpatialPolygonsDataFrame(sps,data)
-indexSE<-over(Aust, spdf)
-regionsSE<-unique(Aust@data[!is.na(indexSE),]$SA2_NAME11)
+```{r ident_coast_regions, eval =FALSE}
+        #Find the regions in the box
+        boxSW<-cbind(c(114,114,120,120,114),c(-31,-36,-36,-31,-31))
+        p = Polygon(boxSW)
+        ps = Polygons(list(p), 1)
+        sps = SpatialPolygons(list(ps))
+        proj4string(sps) = CRS(proj)
+        sps = spTransform(sps, CRS(proj_Aust))
+        data = data.frame(f=99.9)
+        spdf = SpatialPolygonsDataFrame(sps,data)
+        indexSW<-over(Aust, spdf)
+        regionsSW<-unique(Aust@data[!is.na(indexSW),]$SA2_NAME11)
 
+        boxSE<-cbind(c(138,138,150,150,138),c(-36,-48,-48,-36,-36))
+        p = Polygon(boxSE)
+        ps = Polygons(list(p), 1)
+        sps = SpatialPolygons(list(ps))
+        proj4string(sps) = CRS(proj)
+        sps = spTransform(sps, CRS(proj_Aust))
+        data = data.frame(f=99.9)
+        spdf = SpatialPolygonsDataFrame(sps,data)
+        indexSE<-over(Aust, spdf)
+        regionsSE<-unique(Aust@data[!is.na(indexSE),]$SA2_NAME11)
 
-boxEast<-cbind(c(146,146,155,155,146),c(-36,-18,-18,-36,-36))
-p = Polygon(boxEast)
-ps = Polygons(list(p), 1)
-sps = SpatialPolygons(list(ps))
-proj4string(sps) = CRS(proj)
-sps = spTransform(sps, CRS(proj_Aust))
-data = data.frame(f=99.9)
-spdf = SpatialPolygonsDataFrame(sps,data)
-indexEast<-over(Aust, spdf)
-regionsEast<-unique(Aust@data[!is.na(indexEast),]$SA2_NAME11)
+        boxEast<-cbind(c(146,146,155,155,146),c(-36,-18,-18,-36,-36))
+        p = Polygon(boxEast)
+        ps = Polygons(list(p), 1)
+        sps = SpatialPolygons(list(ps))
+        proj4string(sps) = CRS(proj)
+        sps = spTransform(sps, CRS(proj_Aust))
+        data = data.frame(f=99.9)
+        spdf = SpatialPolygonsDataFrame(sps,data)
+        indexEast<-over(Aust, spdf)
+        regionsEast<-unique(Aust@data[!is.na(indexEast),]$SA2_NAME11)
 
-boxNorth<-cbind(c(132,132,155,155,132),c(-12,-18,-18,-12,-12))
-p = Polygon(boxNorth)
-ps = Polygons(list(p), 1)
-sps = SpatialPolygons(list(ps))
-proj4string(sps) = CRS(proj)
-sps = spTransform(sps, CRS(proj_Aust))
-data = data.frame(f=99.9)
-spdf = SpatialPolygonsDataFrame(sps,data)
-indexNorth<-over(Aust, spdf)
-regionsNorth<-unique(Aust@data[!is.na(indexNorth),]$SA2_NAME11)
+        boxNorth<-cbind(c(132,132,155,155,132),c(-12,-18,-18,-12,-12))
+        p = Polygon(boxNorth)
+        ps = Polygons(list(p), 1)
+        sps = SpatialPolygons(list(ps))
+        proj4string(sps) = CRS(proj)
+        sps = spTransform(sps, CRS(proj_Aust))
+        data = data.frame(f=99.9)
+        spdf = SpatialPolygonsDataFrame(sps,data)
+        indexNorth<-over(Aust, spdf)
+        regionsNorth<-unique(Aust@data[!is.na(indexNorth),]$SA2_NAME11)
 
 ```
 
 Now that we have names of the regions from which we want to simulate pest invasion and industry data, we can subset the "Aust" object to focus on those regions.
 
-```{r data_step3}
+```{r make_map_of_coast_regions, eval =FALSE}
 
-Aust_Coast <-subset(Aust,(Aust@data[,"SA2_NAME11"] %in% regionsSW)|(Aust@data[,"SA2_NAME11"] %in% regionsSE)|
-                           (Aust@data[,"SA2_NAME11"] %in% regionsEast)|(Aust@data[,"SA2_NAME11"] %in% regionsNorth))
+        Aust_Coast <-subset(Aust,
+                            (Aust@data[,"SA2_NAME11"] %in% regionsSW)|(
+                                    Aust@data[,"SA2_NAME11"] %in% regionsSE)|
+                                    (Aust@data[,"SA2_NAME11"] %in% regionsEast)|
+                                    (Aust@data[,"SA2_NAME11"] %in% regionsNorth))
 
-#To see the map of the selected regions
-map<-leaflet(data = spTransform(Aust_Coast,CRS(proj))) %>% addPolygons()
-mapshot(map, file = "Map_Coast_Aust.png")
+        #To see the map of the selected regions
+        map<-leaflet(data = spTransform(Aust_Coast,CRS(proj))) %>% addPolygons()
+        mapshot(map, file = "Map_Coast_Aust.png")
 ```
 
 Show map of selected regions:
 
-```{r fig.width=5, fig.height=5}
+```{r display_coast_regions_map, fig.width=5, fig.height=5}
+        img <- readPNG("Map_Coast_Aust.png")
+        grid.raster(img)
+```
 
-img <- readPNG("Map_Coast_Aust.png")
-grid.raster(img)
+### Data on industries
+
+Data for various agricultural industries is available on SA2 scale, download csv file "Agricultural commodities, Australia, state, territory and SA2 - (Data by estimated value of agricultural operations class)" from [Australian Bureau of Statistics](http://www.abs.gov.au/AUSSTATS/abs@.nsf/DetailsPage/7121.02010-11?OpenDocument). 
+
+This data requires quite a bit of cleaning. It is very detailed containing 549 categories of observations on SA2 scale. Apparently, only aggregated data on $ values is available, [Total Values](http://www.abs.gov.au/AUSSTATS/abs@.nsf/allprimarymainfeatures/E66BFDC17D5C631DCA25815500125AA2?opendocument), but there is very detailed data on the areas of cultivation, and yield in weight per ha, etc. For instance, if someone is interested in fennel... the data is there.
+
+We will extract approximate information on distribution of several key commodities: Broadacre crops, Hay, Flowers, Fruit and Nuts and Grapes, Vegetables, and Livestock. Then we merge it with spatial dataframe Aust, and make a visual map of each. The units are ha.
+
+This is not a precise operation and should be viewed as indicative of distribution because there are some unanswered questions about the dataset. For example, several values for the same region show up under the same category - I decided to add them, speculating that these are subregional data, but another explanation is possible. I did not check.
+
+
+```{r merge_with_industry_data, eval = TRUE}
+        #Read the file
+        file<-"71210do042_201011.csv"
+        agri_regions <- read.csv(file, skip=4)
+        #Select only relevant columns
+        agri_regions <-select(agri_regions, c(2,6,7))
+        names(agri_regions)<- c("SA2_NAME11","Commodity","Value")
+        #Make sure they are in the right format
+        agri_regions$SA2_NAME11<-as.character(agri_regions$SA2_NAME11)
+        agri_regions$Value<-as.numeric(agri_regions$Value)
+        agri_regions$Commodity<-as.character(agri_regions$Commodity)
+        #Only keep those regions which match our existing dataset
+        agri_regions <-filter(agri_regions, agri_regions$SA2_NAME11 %in% unique(Aust@data[,"SA2_NAME11"]))
+        #Get rid of NA values in areas of production
+        agri_regions <-filter(agri_regions, !is.na(agri_regions$Value))
+        #Get rid of small values
+        agri_regions <-filter(agri_regions, agri_regions$Value > 100)
+        #Get rid of duplicate rows if any
+        agri_regions<-distinct(agri_regions)
+
+        #This is how many categories there are
+        length(unique(agri_regions$Commodity))
+
+        #If you want to see what they are, run this
+        #sort(unique(agri_regions$Commodity))
+
+        #Flowers
+        flowers_regions <-filter(agri_regions, agri_regions$Commodity == 
+                                         "Nurseries cut flowers and cultivated turf - Total area (ha)")
+        flowers_regions<-select(flowers_regions, c(1,3))
+        flowers_regions<-ddply(flowers_regions,.(SA2_NAME11),summarize,Total_Area_Flowers=sum(Value, 
+                                                                        na.rm = TRUE))
+
+        #merge
+        Aust<-merge(Aust, flowers_regions, by="SA2_NAME11")
+
+        #Broadacre
+        broadacre_regions <-filter(agri_regions, agri_regions$Commodity == 
+        "Broadacre crops - Cereal crops - Barley for grain - Area (ha)" | agri_regions$Commodity == "Broadacre crops - Cereal crops - Wheat for grain - Area (ha)")
+        broadacre_regions<-select(broadacre_regions, c(1,3))
+        broadacre_regions<-ddply(broadacre_regions,.(SA2_NAME11),summarize,Total_Area_Crops=sum(Value, na.rm = TRUE))
+
+        #merge
+        Aust<-merge(Aust, broadacre_regions, by="SA2_NAME11")
+
+        #Fruit and nuts
+        a<-"Fruit and nuts - Berry fruit - Total area (ha)"
+        b<-"Fruit and nuts - Orchard fruit and nut trees - Total area (ha)"
+        c<-"Fruit and nuts - Other fruit - All other fruit - Total area (ha)" 
+        d<-"Grapevines - Grapevines for wine production - Total Area (ha)"
+
+        fruit_regions <-filter(agri_regions, agri_regions$Commodity == a | agri_regions$Commodity == b | agri_regions$Commodity == c | agri_regions$Commodity == d)
+        fruit_regions<-select(fruit_regions, c(1,3))
+        fruit_regions<-ddply(fruit_regions,.(SA2_NAME11),summarize,Total_Area_Fruit=sum(Value, na.rm = TRUE))
+
+        #merge
+        Aust<-merge(Aust, fruit_regions, by="SA2_NAME11")
+
+
+        #Hay
+        hay_regions <-filter(agri_regions, agri_regions$Commodity == "Hay and Silage - Hay - Total area (ha)")
+        hay_regions <-select(hay_regions, c(1,3)) 
+        hay_regions <-ddply(hay_regions,.(SA2_NAME11),summarize,Total_Area_Hay=sum(Value, na.rm = TRUE))
+
+        #merge
+        Aust<-merge(Aust, hay_regions, by="SA2_NAME11")
+
+        #Livestock
+        livestock_regions <-filter(agri_regions,agri_regions$Commodity == "Livestock - Cattle - Total (no.)")
+        livestock_regions <-select(livestock_regions, c(1,3)) 
+        livestock_regions <-ddply(livestock_regions,.(SA2_NAME11),summarize,Total_Area_Livestock=sum(Value, na.rm = TRUE))
+
+        #merge
+        Aust<-merge(Aust, livestock_regions, by="SA2_NAME11")
+
+        #Vegetables
+        veg_regions <- filter(agri_regions, agri_regions$Commodity == "Vegetables for human consumption - All other - Area (ha)" )
+        veg_regions <- select(veg_regions,c(1,3)) 
+        veg_regions <- ddply(veg_regions,.(SA2_NAME11),summarize,Total_Area_Veg=sum(Value, na.rm = TRUE)) 
+
+        #merge
+        Aust<-merge(Aust, veg_regions, by="SA2_NAME11")
+
+
+        #replace NA with 0 
+        Aust@data[is.na(Aust@data)]<-0
+        #save(Aust, file = "Aust_Pop_Industry.Rdata")
+```
+
+Make maps showing various industries.
+
+``` {r make_ind_maps, eval = FALSE} 
+#plot flowers
+pal_flowers<- colorBin(c("white","deeppink4"), domain= Aust$Total_Area_Flowers)
+map_flowers<-leaflet(data = spTransform(Aust,CRS(proj))) %>% addProviderTiles("CartoDB.Positron") %>%
+        addPolygons(fillColor = ~pal_flowers(Total_Area_Flowers),  # refers to pal defined above
+                    fillOpacity = 0.8, 
+                    color = "#BDBDC3", # colour between polygons
+                    weight = 1,
+                    highlight = highlightOptions(
+                            weight = 5,
+                            color = "pink",
+                            dashArray = "",
+                            fillOpacity = 0.7,
+                            bringToFront = TRUE))
+
+mapshot(map_flowers, file = "Map_Flowers.png")
+
+#plot broadacre crops
+pal_crops<- colorBin(c("white","peru"), domain= Aust$Total_Area_Crops)
+map_flowers<-leaflet(data = spTransform(Aust,CRS(proj))) %>% addProviderTiles("CartoDB.Positron") %>%
+        addPolygons(fillColor = ~pal_crops(Total_Area_Crops),  # refers to pal defined above
+                    fillOpacity = 0.8, 
+                    color = "#BDBDC3", # colour between polygons
+                    weight = 1,
+                    highlight = highlightOptions(
+                            weight = 5,
+                            color = "pink",
+                            dashArray = "",
+                            fillOpacity = 0.7,
+                            bringToFront = TRUE))
+
+mapshot(map_flowers, file = "Map_Crops.png")
+
+#plot fruit
+pal_fruit<- colorBin(c("white","peru"), domain= Aust$Total_Area_Fruit)
+map_flowers<-leaflet(data = spTransform(Aust,CRS(proj))) %>% addProviderTiles("CartoDB.Positron") %>%
+        addPolygons(fillColor = ~pal_fruit(Total_Area_Fruit),  # refers to pal defined above
+                    fillOpacity = 0.8, 
+                    color = "#BDBDC3", # colour between polygons
+                    weight = 1,
+                    highlight = highlightOptions(
+                            weight = 5,
+                            color = "pink",
+                            dashArray = "",
+                            fillOpacity = 0.7,
+                            bringToFront = TRUE))
+
+mapshot(map_flowers, file = "Map_Fruit.png")
+
+#plot veg
+pal_veg<- colorBin(c("white","green4"), domain= Aust$Total_Area_Veg)
+map_flowers<-leaflet(data = spTransform(Aust,CRS(proj))) %>% addProviderTiles("CartoDB.Positron") %>%
+        addPolygons(fillColor = ~pal_veg(Total_Area_Veg),  # refers to pal defined above
+                    fillOpacity = 0.8, 
+                    color = "#BDBDC3", # colour between polygons
+                    weight = 1,
+                    highlight = highlightOptions(
+                            weight = 5,
+                            color = "pink",
+                            dashArray = "",
+                            fillOpacity = 0.7,
+                            bringToFront = TRUE))
+
+mapshot(map_flowers, file = "Map_Veg.png")
+
+#plot hay
+pal_hay<- colorBin(c("white","gold3"), domain= Aust$Total_Area_Hay)
+map_flowers<-leaflet(data = spTransform(Aust,CRS(proj))) %>% addProviderTiles("CartoDB.Positron") %>%
+        addPolygons(fillColor = ~pal_hay(Total_Area_Hay),  # refers to pal defined above
+                    fillOpacity = 0.8, 
+                    color = "#BDBDC3", # colour between polygons
+                    weight = 1,
+                    highlight = highlightOptions(
+                            weight = 5,
+                            color = "pink",
+                            dashArray = "",
+                            fillOpacity = 0.7,
+                            bringToFront = TRUE))
+
+mapshot(map_flowers, file = "Map_Hay.png")
+
+#plot livestock
+pal_livestock<- colorBin(c("white","lavenderblush4"), domain= Aust$Total_Area_Livestock)
+map_flowers<-leaflet(data = spTransform(Aust,CRS(proj))) %>% addProviderTiles("CartoDB.Positron") %>%
+        addPolygons(fillColor = ~pal_livestock(Total_Area_Livestock),  # refers to pal defined above
+                    fillOpacity = 0.8, 
+                    color = "#BDBDC3", # colour between polygons
+                    weight = 1,
+                    highlight = highlightOptions(
+                            weight = 5,
+                            color = "pink",
+                            dashArray = "",
+                            fillOpacity = 0.7,
+                            bringToFront = TRUE))
+
+mapshot(map_flowers, file = "Map_Livestock.png")
 
 ```
 
+Show map of flower cultivation and hay production areas, as examples.
+
+```{r fig.width=5, fig.height=5, eval = TRUE}
+        img <- readPNG("Map_Flowers.png")
+        grid.raster(img)
+```
+
+While hay is produced here:
+
+
+```{r fig.width=5, fig.height=5, eval = TRUE}
+        img <- readPNG("Map_Hay.png")
+        grid.raster(img)
+```
+
+##  Simulating maximum range of invasion for 20 pests
+
+The proper way to do this is to use CLIMEX model or something similar, because CEBRA application is an exploratory tool minimally plausible distributions are sufficient. We will use the SA2 data to model these ranges. The species considered come from [Australian Government, Department of Agriculture](http://www.agriculture.gov.au/pests-diseases-weeds/plant/xylella).
+
+Looking at the industry data makes it unclear what the units are, it seems unlikely that these are indeed in "ha" as it would appear that more area is cultivated than is available. That's not a problem though for this coarse excercise as we will just treat it as absence/presense in an SA2 unit information.
+
+
+```{r species_range, eval = TRUE}
+       
+        species<-c("Xylella","Khapra beetle",
+           "Exotic fruit fly","Karnal bunt","Huanglongbing","Gypsy moths",
+           "Tramp ants","Bees mites","Giant African snail","Stink bug",
+           "Zebra chip","Ug99","Russian wheat aphid","Citrus canker",
+           "Guava rust","Airborne phytophthora","Exotic bees",
+           "Panama disease tropical race 4","Potato cyst nematode","Leaf miner")
+        
+        #Select commodity key words to approximate the range of respective invasive species
+        host<- c("Grapevines", "seed", "Fruit",  "Wheat", "Citrus", "Total", "and","Orchard",
+         "Vegetables","flower","Tomatoes", "Barley","Broadacre", "Citrus","Trees","Trees","rchard","Bananas",
+         "Potatoes","t/ha")
+        
+        
+        species_host<-data.frame(Species=species, Selected_by= host)
+        species_host
+        
+        write.csv(species_host, "Species_Host.csv") 
+        
+        #Simulate species distributions as absence/presence values by region
+        #And merge with Aust
+        #grepl function lets us choose all the regions that have to do with a specific host
+        for (i in 1:length(species))
+                {
+                        temp<- filter(agri_regions, grepl(host[i], agri_regions$Commodity))
+                        temp <- select(temp,c(1,3)) 
+                        temp <- ddply(temp,.(SA2_NAME11),summarize, Indicator =sum(Value, na.rm = TRUE))
+                        temp$Indicator[is.na(temp$Indicator)]<-"absent"
+                        temp$Indicator[temp$Indicator>0]<-"present"
+                        names(temp)<-c("SA2_NAME11", species[i])
+                        Aust<-merge(Aust, temp, by="SA2_NAME11")
+       
+                }
+
+        #replace NA with "absent"
+        Aust@data[is.na(Aust@data)]<-"absent"
+        #save(Aust, file = "Australia.Rdata")
+
+```
+
+Now we can make maps that show simulated maximum spread of these invasive pests.
+
+
+```{r species_range_map, eval = FALSE}
+
+
+        for (i in 1:length(species))
+        {
+                #file = name of the destinatin file
+                file<-paste(species[i],"_map",".png", sep="")
+                png(file = file, bg = "transparent")
+                print(qtm(shp = Aust, fill = species[i],borders = NULL))
+                dev.off()
+        }
+
+```
+
+An example of a pest ivasion map.
+
+```{r fig.width=5, fig.height=5, eval = TRUE}
+
+        img <- readPNG("Giant African snail_map.png")
+        grid.raster(img)
+        
+```
+
+#Prepare inputs for the CEBRA app
+
+Now we can make a table that will provide inputs for the app. We will record the population each pest affects, area of invasion, area of overlap with each each industry and main population centers (above certain density), proportion of value at risk for each industry (calculated by taking the [area of overlap]/[area of industry], etc.
+
+
+```{r inputs_for_app, eval = TRUE}
+        
+        #Probably should not be making extra copies of data without need
+        x<-Aust@data
+        #head(x)
+
+        input_app<-matrix(NA,nrow = length(species), ncol = 7)
+        
+        for (i in 1:length(species))
+                {
+                        y<-subset(x, x[,species[i]]=="present" & x$Total_Area_Flowers > 0)
+                        input_app[i,1]<-sum(y$Area_ha)
+
+                        y<-subset(x, x[,species[i]]=="present" & x$Total_Area_Crops > 0)
+                        input_app[i,2]<-sum(y$Area_ha)
+
+                        y<-subset(x, x[,species[i]]=="present" & x$Total_Area_Fruit > 0)
+                        input_app[i,3]<-sum(y$Area_ha)
+
+                        y<-subset(x, x[,species[i]]=="present" & x$Total_Area_Hay > 0)
+                        input_app[i,4]<-sum(y$Area_ha)
+
+                        y<-subset(x, x[,species[i]]=="present" & x$Total_Area_Livestock > 0)
+                        input_app[i,5]<-sum(y$Area_ha)
+
+                        y<-subset(x, x[,species[i]]=="present" & x$Total_Area_Veg > 0)
+                        input_app[i,6]<-sum(y$Area_ha)
+
+                        y<-subset(x, x[,species[i]]=="present")
+                        input_app[i,7]<-sum(y$Population)
+                }
+        #tidy the dataframe
+        colnames(input_app)<-c("Overlap_Flowers","Overlap_Crops","Overlap_Fruit","Overlap_Hay","Overlap_Livestock","Overlap_Veg","Overlap_Population_Numbers")
+        input_app<-data.frame(input_app)
+        input_app<-mutate(input_app, Species=species)
+        input_app<-input_app[,c(8,1:7)]
+        
+        y<-subset(x, x$Total_Area_Flowers > 0)
+        Total_Flowers<-sum(y$Area_ha)
+
+        y<-subset(x, x$Total_Area_Crops > 0)
+        Total_Crops<-sum(y$Area_ha)
+
+        y<-subset(x,  x$Total_Area_Fruit > 0)
+        Total_Fruit<-sum(y$Area_ha)
+
+        y<-subset(x,  x$Total_Area_Hay > 0)
+        Total_Hay<-sum(y$Area_ha)
+
+        y<-subset(x,  x$Total_Area_Livestock > 0)
+        Total_Livestock<-sum(y$Area_ha)
+
+        y<-subset(x,  x$Total_Area_Veg > 0)
+        Total_Veg <-sum(y$Area_ha)
+
+        Total_Population <-sum(x$Population)
+
+        input_app<-mutate(input_app, Prop_Flowers = Overlap_Flowers/Total_Flowers)
+        input_app<-mutate(input_app, Prop_Fruit = Overlap_Fruit/Total_Fruit)
+        input_app<-mutate(input_app, Prop_Veg = Overlap_Veg/Total_Veg)
+        input_app<-mutate(input_app, Prop_Hay = Overlap_Hay/Total_Hay)
+        input_app<-mutate(input_app, Prop_Crops = Overlap_Crops/Total_Crops)
+        input_app<-mutate(input_app, Prop_Livestock = Overlap_Livestock/Total_Livestock)
+        input_app<-mutate(input_app, Prop_Population = Overlap_Population_Numbers/Total_Population)
+
+
+```
+
+##Include economic data
+
+The data on economic value comes from [Australian Bureau of Statistics](http://www.abs.gov.au/ausstats/abs@.nsf/0/58529ACD49B5ECE0CA2577A000154456?Opendocument). 
+
+'VALUE OF AGRICULTURAL COMMODITIES PRODUCED, Australia, year ended 30 June 2016', in aggregate, are used and added to the inputs.
+
+
+```{r add_econ_data, eval = TRUE}
+
+#Values from the website linked above, in millions of Australian dollars
+        Value_Flowers<-1296.3
+#Wheat, Oates,Barley, Sorghum,and Rice 
+        Value_Crops<-6170.1+397.9+2276.6+491.6+114.8
+#Fruit and grapes
+        Value_Fruit<-4224.6+1333.9
+#http://www.abs.gov.au/ausstats/abs@.nsf/Lookup/by%20Subject/1301.0~2012~Main%20Features~Agricultural%20production~260
+        Value_Hay<-1600
+#Slaughtering and products
+        Value_Livestock<-20622.5+8029.9
+        
+        Value_Veg <-3585.4
+        
+        input_app<-mutate(input_app, Econ_Flowers= Prop_Flowers*Value_Flowers)
+        input_app<-mutate(input_app, Econ_Fruit =Prop_Fruit*Value_Fruit)
+        input_app<-mutate(input_app, Econ_Veg = Prop_Veg*Value_Veg)
+        input_app<-mutate(input_app, Econ_Hay =Prop_Hay*Value_Hay)
+        input_app<-mutate(input_app, Econ_Crops =Prop_Crops*Value_Crops)
+        input_app<-mutate(input_app, Econ_Livestock = Prop_Livestock*Value_Livestock)
+        
+```
+
+##Include default values that can be altered in the app
+
+By looking at the proportion of overlap between species distribution and key industries, we have arrived at values at risk. However, it is unlikely that the pest will cause a 100% damage whenever it comes in contact with a commodity. In the app the extent of damage for each species and each industry can be modified. 
+
+Read default values from an 'Impact_Species_Host' file. 
+
+Store "Input_App.csv" in the 'data' directory for use by the app, this file now contains default values for monetary and non-monetary damages, management utility, time and unweighted impact scores that produce default ranking.
+
+
+```{r add_defaults, eval = TRUE}
+
+        file<-"Impact_Species_Host.xls"
+        #Read the file
+        impacts <- read_excel(file, sheet="Impacts", skip=0)
+        
+        input_app<-merge(input_app, impacts, by="Species")
+        
+        #Add a column with total monetary damage
+        input_app<-mutate(input_app, Monetary_Damage= (Econ_Flowers*Impact_Flowers+
+                                                Econ_Fruit*Impact_Fruit+
+                                                Econ_Veg*Impact_Veg+
+                                                Econ_Hay*Impact_Hay+
+                                                Econ_Crops*Impact_Crops+
+                                                Econ_Livestock*Impact_Livestock))
+                                               
+        input_app<-mutate(input_app, Man_Utility = 1)
+        
+        input_app<-mutate(input_app, Unweighted_Score = (Monetary_Damage/max(Monetary_Damage)+
+                                                Amenity/max(Amenity)+
+                                                Environment/max(Environment)+                 
+                                                Man_Utility/max(Man_Utility)+
+                                                (1-Time/max(Time))))                     
+                                                
+                                                                                            
+                                                                            
+                                                                        
+        
+        write.csv(input_app, "data/Input_App.csv") 
+        
+        #Look at the names of the top 10 largest by utility
+        input_app[order(-input_app$Unweighted_Score),][1:10,][,c("Species", "Monetary_Damage", "Unweighted_Score")]
+        
+        #Look at the names of the top 10 largest by monetary damage
+        input_app[order(-input_app$Monetary_Damage),][1:10,][,c("Species", "Monetary_Damage", "Unweighted_Score")]
+        
+```
