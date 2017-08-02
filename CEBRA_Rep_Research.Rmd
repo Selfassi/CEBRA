@@ -253,7 +253,8 @@ This is not a precise operation and should be viewed as indicative of distributi
 
         #Broadacre
         broadacre_regions <-filter(agri_regions, agri_regions$Commodity == 
-        "Broadacre crops - Cereal crops - Barley for grain - Area (ha)" | agri_regions$Commodity == "Broadacre crops - Cereal crops - Wheat for grain - Area (ha)")
+        "Broadacre crops - Cereal crops - Barley for grain - Area (ha)" | agri_regions$Commodity == 
+        "Broadacre crops - Cereal crops - Wheat for grain - Area (ha)")
         broadacre_regions<-select(broadacre_regions, c(1,3))
         broadacre_regions<-ddply(broadacre_regions,.(SA2_NAME11),summarize,Total_Area_Crops=sum(Value, na.rm = TRUE))
 
@@ -266,7 +267,8 @@ This is not a precise operation and should be viewed as indicative of distributi
         c<-"Fruit and nuts - Other fruit - All other fruit - Total area (ha)" 
         d<-"Grapevines - Grapevines for wine production - Total Area (ha)"
 
-        fruit_regions <-filter(agri_regions, agri_regions$Commodity == a | agri_regions$Commodity == b | agri_regions$Commodity == c | agri_regions$Commodity == d)
+        fruit_regions <-filter(agri_regions, agri_regions$Commodity == a | agri_regions$Commodity == 
+                                b | agri_regions$Commodity == c | agri_regions$Commodity == d)
         fruit_regions<-select(fruit_regions, c(1,3))
         fruit_regions<-ddply(fruit_regions,.(SA2_NAME11),summarize,Total_Area_Fruit=sum(Value, na.rm = TRUE))
 
@@ -291,7 +293,8 @@ This is not a precise operation and should be viewed as indicative of distributi
         Aust<-merge(Aust, livestock_regions, by="SA2_NAME11")
 
         #Vegetables
-        veg_regions <- filter(agri_regions, agri_regions$Commodity == "Vegetables for human consumption - All other - Area (ha)" )
+        veg_regions <- filter(agri_regions, agri_regions$Commodity == 
+                                "Vegetables for human consumption - All other - Area (ha)" )
         veg_regions <- select(veg_regions,c(1,3)) 
         veg_regions <- ddply(veg_regions,.(SA2_NAME11),summarize,Total_Area_Veg=sum(Value, na.rm = TRUE)) 
 
@@ -477,7 +480,7 @@ Now we can make maps that show simulated maximum spread of these invasive pests.
         for (i in 1:length(species))
         {
                 #file = name of the destinatin file
-                file<-paste(species[i],"_map",".png", sep="")
+                file<-paste("www/",species[i],"_map",".png", sep="")
                 png(file = file, bg = "transparent")
                 print(qtm(shp = Aust, fill = species[i],borders = NULL))
                 dev.off()
@@ -489,7 +492,7 @@ An example of a pest ivasion map.
 
 ```{r fig.width=5, fig.height=5, eval = TRUE}
 
-        img <- readPNG("Giant African snail_map.png")
+        img <- readPNG("www/Giant African snail_map.png")
         grid.raster(img)
         
 ```
@@ -531,7 +534,8 @@ Now we can make a table that will provide inputs for the app. We will record the
                         input_app[i,7]<-sum(y$Population)
                 }
         #tidy the dataframe
-        colnames(input_app)<-c("Overlap_Flowers","Overlap_Crops","Overlap_Fruit","Overlap_Hay","Overlap_Livestock","Overlap_Veg","Overlap_Population_Numbers")
+        colnames(input_app)<-c("Overlap_Flowers","Overlap_Crops",
+                               "Overlap_Fruit","Overlap_Hay","Overlap_Livestock","Overlap_Veg","Overlap_Population_Numbers")
         input_app<-data.frame(input_app)
         input_app<-mutate(input_app, Species=species)
         input_app<-input_app[,c(8,1:7)]

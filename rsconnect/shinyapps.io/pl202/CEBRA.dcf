@@ -3,9 +3,9 @@ title: CEBRA
 account: pl202
 server: shinyapps.io
 appId: 201236
-bundleId: 923514
+bundleId: 924653
 url: https://pl202.shinyapps.io/CEBRA/
-when: 1501606186.46463
+when: 1501683279.24265
 asMultiple: FALSE
 asStatic: FALSE
-ignoredFiles: 32350ds0009_sa2_summary_statistics_2010_2015.xls|71210do042_201011.csv|Airborne phytophthora_map.png|Bees mites_map.png|CEBRA_Rep_Research.html|CEBRA_Rep_Research.Rmd|Citrus canker_map.png|Exotic bees_map.png|Exotic fruit fly_map.png|Giant African snail_map.png|Guava rust_map.png|Gypsy moths_map.png|Huanglongbing_map.png|Impact_Species_Host.xls|Karnal bunt_map.png|Khapra beetle_map.png|Leaf miner_map.png|Map_Coast_Aust.png|Map_Crops.png|Map_Flowers.png|Map_Fruit.png|Map_Hay.png|Map_Livestock.png|Map_Population.png|Map_Veg.png|Panama disease tropical race 4_map.png|Potato cyst nematode_map.png|README.md|Russian wheat aphid_map.png|SA2_2011_AUST.cpg|SA2_2011_AUST.dbf|SA2_2011_AUST.prj|SA2_2011_AUST.shp|SA2_2011_AUST.shx|SimulatingSpatialData.R|Species_Host.csv|Stink bug_map.png|Tramp ants_map.png|Ug99_map.png|ui_old.R|Xylella_map.png|Zebra chip_map.png
+ignoredFiles: 32350ds0009_sa2_summary_statistics_2010_2015.xls|71210do042_201011.csv|CEBRA_Rep_Research.html|CEBRA_Rep_Research.Rmd|Impact_Species_Host.xls|Map_Coast_Aust.png|Map_Crops.png|Map_Flowers.png|Map_Fruit.png|Map_Hay.png|Map_Livestock.png|Map_Population.png|Map_Veg.png|README.md|SA2_2011_AUST.cpg|SA2_2011_AUST.dbf|SA2_2011_AUST.prj|SA2_2011_AUST.shp|SA2_2011_AUST.shx|Species_Host.csv

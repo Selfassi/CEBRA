@@ -82,7 +82,12 @@ fluidRow(column(3,
                 tags$li (strong("Management utility")),
                 br(),
                 h4("for each of the species that you chose to do, proceed to the",strong("'Ranking'"),"tab to explore 
-                alternative prioritisations.")
+                alternative prioritisations. The species are ranked by adding weighted and normalised values for damages
+                to agriculture, amenity, and environment while taking the timescales of invasion for each species into account. 
+                Management utility values are currently not part of the ranking. "),
+                br(),
+                h4("After you submitted your responses, you can download all responses as a csv file:"), 
+                downloadButton("downloadResponses", strong("Download"), align = "right")
         ), 
         
         column(9, 

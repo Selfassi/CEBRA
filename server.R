@@ -61,6 +61,7 @@ input_app<-read.csv("data/Input_App.csv", stringsAsFactors = FALSE)
 input_app<-mutate(input_app, Environment_User=Environment)
 input_app<-mutate(input_app, Amenity_User=Amenity)
 input_app<-mutate(input_app, Monetary_Damage_User=Monetary_Damage)
+input_app<-mutate(input_app, Time_User=Time)
 
 #Colours
 library(RColorBrewer)
@@ -171,7 +172,7 @@ shinyServer(function(session,input, output) {
         
 
         #################################################################### 
-        #Calculate the total damage to agricultural production by species
+        #Calculate the total damage to agricultural production for each species
         total_agri_damage<-reactive(
                         
                 input_app[input_app$Species==input$species,"Econ_Crops"]*input$broadacre_impact*input$broadacre_percent_damage+
@@ -186,6 +187,7 @@ shinyServer(function(session,input, output) {
         #Stores user choices for each species
         amenity_user_temp<-reactive(input$amenity)
         environment_user_temp<-reactive(input$environment)
+        time_user_temp<-reactive(as.numeric(input$timescale))
         
         #################################################################### 
         #Monetised damage by species 
@@ -205,7 +207,12 @@ shinyServer(function(session,input, output) {
                                              input$hay_impact*input$hay_percent_damage,
                                              input$broadacre_impact*input$broadacre_percent_damage,
                                              input$livestock_impact*input$livestock_percent_damage, 
-                                             input$amenity,input$environment, input$timescale,1,1,1,1)))
+                                             input$amenity,input$environment, input$timescale,
+                                             input$score_1,
+                                             input$unc_1,
+                                             input$score_2,
+                                             input$unc_2
+                                        )))
                         
                         colnames(data)<-c("Name","Time_Of_Response", "Species",	
                                         "Impact_Flowers",	
@@ -215,7 +222,9 @@ shinyServer(function(session,input, output) {
                                         "Impact_Crops",	
                                         "Impact_Livestock",	
                                         "Amenity", "Environment", "Time", 
-                                        "Mananagement_Impact", "Management_Impact_Unc", "Implementability",
+                                        "Mananagement_Impact", 
+                                        "Management_Impact_Unc", 
+                                        "Implementability",
                                         "Implementability_Unc")											
                         
                         saveDataG(data[1,])
@@ -224,15 +233,18 @@ shinyServer(function(session,input, output) {
                         input_app[input_app$Species==input$species,"Monetary_Damage_User"]<<-total_agri_damage()
                         input_app[input_app$Species==input$species,"Amenity_User"]<<-amenity_user_temp()
                         input_app[input_app$Species==input$species,"Environment_User"]<<-environment_user_temp()
+                        input_app[input_app$Species==input$species,"Time_User"]<<-time_user_temp()
                         
                         
                         output$rank_default <- renderPlot({
-                                
+                        
+                                #Calculates weighted utility relative to default       
                                 temp <- reactive({
                                         input$weight_env*input_app$Environment*input$native_species/max(input_app$Environment)+
                                                 input$weight_econ*input_app$Monetary_Damage*
                                                 input$market/max(input_app$Monetary_Damage)+
-                                                input$weight_amen*input_app$Amenity*input$nonmarket/max(input_app$Amenity)
+                                                input$weight_amen*input_app$Amenity*input$nonmarket/max(input_app$Amenity)+
+                                                (1-input_app$Time/max(input_app$Time))
                                 })
                                 
                                 input_app<-mutate(input_app, Measure=temp())
@@ -256,7 +268,8 @@ shinyServer(function(session,input, output) {
                                                 input$native_species/max(input_app$Environment)+
                                                 input$weight_econ*input_app$Monetary_Damage_User*
                                                 input$market/max(input_app$Monetary_Damage)+
-                                                input$weight_amen*input_app$Amenity_User*input$nonmarket/max(input_app$Amenity)
+                                                input$weight_amen*input_app$Amenity_User*input$nonmarket/max(input_app$Amenity)+
+                                                (1-input_app$Time_User/max(input_app$Time))
                                 })
                                 
                                 
@@ -275,15 +288,24 @@ shinyServer(function(session,input, output) {
                                 print(p2)
                         }) #end ranking user
                         
-                        
-                        #}) 
-                
+                       
                 
                 
         })
         
 #################################################################### 
-
+# Allow user to download responses
+output$downloadResponses <- downloadHandler(
+                filename = function() { 
+                        paste("Responses_", humanTime(), ".csv", sep="")
+                        
+                },
+                content = function(file) {
+                        write.csv(loadDataG(), file, row.names = TRUE)
+                }
+        )            
+        
+        
 
  ####################################################################   
  output$image1 <- renderPlot({
