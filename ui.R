@@ -20,7 +20,11 @@ tags$head(tags$style("
                 .head_row{height:150px;background-color: #857d6f; color: white;} 857d6f
                 .species_row{height:400px;}
 
-                body {background-color: #d5d2ca;}
+                body {background-color: #d5d2ca;
+                        font-family: Calibri, arial, sans-serif;
+                        font-size: 16px;
+                        overflow: auto;
+                     }
                 .instructions_tab {background-color:  #857d6f; color: white;}
                 .time_box{background-color:  #284e36; color: white;}
                 .tab_box{background-color:  #165788; color: white;}
@@ -30,12 +34,30 @@ tags$head(tags$style("
 
                 #large .selectize-input { line-height: 40px; }
                 #large .selectize-dropdown { line-height: 30px; }
-
+                
+        
+                .visually-hidden, .js-visually-hidden, .skiplinks-link 
+                {
+                     border: 0;
+                     clip: rect(0 0 0 0);
+                     margin: -1px;
+                     height: 1px;
+                     overflow: hidden;
+                     padding: 0;
+                     width: 1px;
+                     position: absolute;
+                     }
                 ")),
                                            
 #The main title
-h2(class = "head_row", "This elicitation tool is designed to illustrate alternative ways of calculating the economic cost 
-of invasive species to Australia." , align = "center"),
+fluidRow(class = "head_row", 
+         column(4,
+                h2(img( src = "master-logo.jpeg", 
+                        height = 110, width = 160, 
+                       inlign = TRUE))),
+                
+         column(8,br(),h2(strong(" PRIORITISING INVASIVE SPECIES IN AUSTRALIA", 
+                   align = "left")))),
                                            
 #Row 1 consists of species, distribution and time perios selection
 #################################################################### 
