@@ -24,6 +24,7 @@ library(magrittr)
 library(RColorBrewer)
 library(tmap)
 require(lattice)
+
 ```
 
 ## Summary
@@ -481,7 +482,8 @@ Now we can make maps that show simulated maximum spread of these invasive pests.
         {
                 #file = name of the destinatin file
                 file<-paste("www/",species[i],"_map",".png", sep="")
-                png(file = file, bg = "transparent")
+                png(file = file, bg = "white", width = 800, height=500)
+                par(mar=c(0,0,0,0))
                 print(qtm(shp = Aust, fill = species[i],borders = NULL))
                 dev.off()
         }
@@ -499,7 +501,7 @@ An example of a pest ivasion map.
 
 #Prepare inputs for the CEBRA app
 
-Now we can make a table that will provide inputs for the app. We will record the population each pest affects, area of invasion, area of overlap with each each industry and main population centers (above certain density), proportion of value at risk for each industry (calculated by taking the [area of overlap]/[area of industry], etc.
+Now we can make a table that will provide inputs for the app. We will record the population each pest affects, area of invasion, area of overlap with each each industry and main population centers (above certain density), proportion of value at risk for each industry, which is calculated by taking the [area where industry and pests overlap]/[total area of industry].
 
 
 ```{r inputs_for_app, eval = TRUE}
@@ -580,15 +582,15 @@ The data on economic value comes from [Australian Bureau of Statistics](http://w
 
 ```{r add_econ_data, eval = TRUE}
 
-#Values from the website linked above, in millions of Australian dollars
+        #Values from the website linked above, in millions of Australian dollars
         Value_Flowers<-1296.3
-#Wheat, Oates,Barley, Sorghum,and Rice 
+        #Wheat, Oates,Barley, Sorghum,and Rice 
         Value_Crops<-6170.1+397.9+2276.6+491.6+114.8
-#Fruit and grapes
+        #Fruit and grapes
         Value_Fruit<-4224.6+1333.9
-#http://www.abs.gov.au/ausstats/abs@.nsf/Lookup/by%20Subject/1301.0~2012~Main%20Features~Agricultural%20production~260
+        #http://www.abs.gov.au/ausstats/abs@.nsf/Lookup/by%20Subject/1301.0~2012~Main%20Features~Agricultural%20production~260
         Value_Hay<-1600
-#Slaughtering and products
+        #Slaughtering and products
         Value_Livestock<-20622.5+8029.9
         
         Value_Veg <-3585.4
@@ -627,7 +629,7 @@ Store "Input_App.csv" in the 'data' directory for use by the app, this file now 
                                                 Econ_Crops*Impact_Crops+
                                                 Econ_Livestock*Impact_Livestock))
                                                
-        input_app<-mutate(input_app, Man_Utility = 1)
+        input_app<-mutate(input_app, Man_Utility = 4.9)
         
         input_app<-mutate(input_app, Unweighted_Score = (Monetary_Damage/max(Monetary_Damage)+
                                                 Amenity/max(Amenity)+
@@ -635,9 +637,14 @@ Store "Input_App.csv" in the 'data' directory for use by the app, this file now 
                                                 Man_Utility/max(Man_Utility)+
                                                 (1-Time/max(Time))))                     
                                                 
-                                                                                            
-                                                                            
-                                                                        
+        #Generate random likelihood of entry, spread and establishment 
+        set.seed(347)
+        chance<-rnorm(20,0.6, 0.2)
+        social<-round(rnorm(20,3, 1))+1
+        
+        input_app<-mutate(input_app, Likelihood = chance) 
+        #Generate random community impact scores
+        input_app<-mutate(input_app, Community = social)                                                                 
         
         write.csv(input_app, "data/Input_App.csv") 
         

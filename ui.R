@@ -17,14 +17,13 @@ tags$style(HTML("
                 ")), 
 
 tags$head(tags$style("
-                .head_row{height:150px;background-color: #857d6f; color: white;} 857d6f
+                .head_row{height:150px;background-color: #857d6f; color: white;} 
                 .species_row{height:400px;}
 
                 body {background-color: #d5d2ca;
                         font-family: Calibri, arial, sans-serif;
                         font-size: 16px;
-                        overflow: auto;
-                     }
+                        overflow: auto;}
                 .instructions_tab {background-color:  #857d6f; color: white;}
                 .time_box{background-color:  #284e36; color: white;}
                 .tab_box{background-color:  #165788; color: white;}
@@ -34,35 +33,27 @@ tags$head(tags$style("
 
                 #large .selectize-input { line-height: 40px; }
                 #large .selectize-dropdown { line-height: 30px; }
-                
-        
-                .visually-hidden, .js-visually-hidden, .skiplinks-link 
-                {
-                     border: 0;
-                     clip: rect(0 0 0 0);
-                     margin: -1px;
-                     height: 1px;
-                     overflow: hidden;
-                     padding: 0;
-                     width: 1px;
-                     position: absolute;
-                     }
+
                 ")),
                                            
 #The main title
 fluidRow(class = "head_row", 
-         column(4,
-                h2(img( src = "master-logo.jpeg", 
+         column(3,
+                h2(img( src = "cep-logo.jpeg", 
                         height = 110, width = 160, 
                        inlign = TRUE))),
                 
-         column(8,br(),h2(strong(" PRIORITISING INVASIVE SPECIES IN AUSTRALIA", 
-                   align = "left")))),
+         column(6,br(),h2(strong(" PRIORITISING INVASIVE SPECIES IN AUSTRALIA", 
+                   align = "left"))),
+         column(2,
+                h2(img( src = "aust-logo.png", 
+                        height = 110, 
+                        inlign = TRUE),align = "right"))),
                                            
 #Row 1 consists of species, distribution and time perios selection
 #################################################################### 
 fluidRow(
-        column(4,class = "species_row",   
+        column(3,  
                 
                 div(id = "large", selectInput("species", h3("Select species"), c("Xylella","Khapra beetle",
                                 "Exotic fruit fly","Karnal bunt","Huanglongbing","Gypsy moths",
@@ -70,30 +61,40 @@ fluidRow(
                                 "Zebra chip","Ug99","Russian wheat aphid","Citrus canker",
                                 "Guava rust","Airborne phytophthora","Exotic bees",
                                 "Panama disease tropical race 4","Potato cyst nematode","Leaf miner"))),
-                
-                imageOutput("species_photo")
+                sliderInput("likelihood", h4("Probability of entry, establishment and spread"), 
+                           0, 1, 1, 0.01)
         ),# end first column 
-        column(4,class = "species_row", 
-                h3("Maximum range"),
+        column(5, 
+                        h3("Maximum range"), 
                         #h4("Simulated area of maximum invasion is ", 
                         #strong(textOutput("area", inline = TRUE)), "in millions of ha."),
-                actionButton("show", "Exlanatory note"),
-                imageOutput("map", width = "70%")
-                
+                        actionButton("show_map", "Exlanatory note")
         ),# end second column
-        column(1, class = "species_row"), # end 3rd column
-        column(3, class = "species_row", br(), 
-                wellPanel(class= "time_box",
-                        h4("How quickly can the maximum range be reached?"),
-                        selectInput("timescale", h4("In years"), c(10, 30, 100)),
+        column(1),
+        column(3,
+               selectInput("timescale", h3("How quickly can the maximum range be reached, in years"), c(10, 30, 100)))
+), 
+#################################################################### 
+fluidRow(
+        column(3,  
+                imageOutput("species_photo")
+               
+               
+        ),# end first column 
+        column(5, 
+               imageOutput("map", inline = TRUE, width = "90%")
+        ),# end second column
+        column(1), # end 3rd column
+        column(2, 
+               wellPanel(class= "time_box",
                         textInput("name", h4("Please enter your name or initials")),
-                        br(),
-                        h4(em("You must submit at least one answer to be able to compare rankings.")), 
-                        actionButton("submit", strong("Submit"), align = "center")
-                )  # end wellpanel
+                         br(), br(),
+                         h4(em("You must submit at least one answer to be able to compare rankings.")),
+                         br(),
+                         actionButton("submit", strong("Submit"), align = "center")
+               )  # end wellpanel
         ) # end fourth column
-),# end second row  
-
+),# 
 #Row 2 
 #################################################################### 
 fluidRow(column(12, 
@@ -126,7 +127,9 @@ fluidRow(column(3,
 tabPanel(h5("Monetised /damages"), 
          
         fluidRow(column(12,h3("Select types of agricultural production at risk from ",textOutput("species_name", inline = TRUE),
-                              "and state your beliefs about possible proportional damage to each of the industries:"))), 
+                                "and state your beliefs about possible proportional damage to each of the industries, 
+                                in the areas of overlap with the pest
+                                :"))), 
         fluidRow(column(6, 
                         checkboxInput("broadacre_impact", h4("Broadacre cereal and non-cereal crops"), value = TRUE),
                         conditionalPanel(
@@ -139,40 +142,38 @@ tabPanel(h5("Monetised /damages"),
                         conditionalPanel(
                                 condition = "input.hay_impact == true",
                                 sliderInput("hay_percent_damage", "Reduction in hay and silage, %", 0, 1,
-                                            0.1, 0.05)
+                                        0.1, 0.05)
                         ),                        
                         checkboxInput("flower_impact", h4("Flower and nurseries"), value = TRUE),
                         conditionalPanel(
                                 condition = "input.flower_impact == true",
                                 sliderInput("flower_percent_damage", "Reduction in flower and nurseries, %", 0, 1,
-                                            0.1, 0.05)
+                                        0.1, 0.05)
                         ) 
                 ),# end first column 
                 column(6,
                         checkboxInput("fruit_impact", h4("Fruit and nuts"), value = TRUE),
                         conditionalPanel(
-                                        condition = "input.fruit_impact == true",
-                                        sliderInput("fruit_percent_damage", "Reduction in fruit and nuts, %", 0, 1,
-                                                0.1, 0.05)
-                       ), 
+                                condition = "input.fruit_impact == true",
+                                sliderInput("fruit_percent_damage", "Reduction in fruit and nuts, %", 0, 1,
+                                        0.1, 0.05)
+                        ), 
                         checkboxInput("veg_impact", h4("Vegetables for human consumption"), value = TRUE),
                         conditionalPanel(
-                                        condition = "input.veg_impact == true",
-                                        sliderInput("veg_percent_damage", "Reduction in vegetables production, %", 0, 1,
-                                                0.1, 0.05)
-                       ), 
+                                condition = "input.veg_impact == true",
+                                sliderInput("veg_percent_damage", "Reduction in vegetables production, %", 0, 1,
+                                        0.1, 0.05)
+                        ), 
                         checkboxInput("livestock_impact", h4("Livestock products"), value = TRUE),
                         conditionalPanel(
-                                        condition = "input.livestock_impact == true",
-                                        sliderInput("livestock_percent_damage", "Reduction in livestock products, %", 0, 1,
-                                                0.1, 0.05)
+                                condition = "input.livestock_impact == true",
+                                sliderInput("livestock_percent_damage", "Reduction in livestock products, %", 0, 1,
+                                        0.1, 0.05)
                        ))), 
 
-        fluidRow(column(12, class = "tab_box", 
+        fluidRow(column(9, class = "tab_box", 
                         
-                        h4(em("Check the box below if you believe the pest will cause severe local economic damage.")),
-                        checkboxInput("local_econ_impact", h4("Can devastate communities?"), value = FALSE),
-                      
+                       
                         h4("On a national scale, the annual damage from this pest is", 
                            strong(textOutput("agri_value_damage", inline = TRUE)),
                            "in millions of Australian dollars.") 
@@ -183,22 +184,35 @@ tabPanel(h5("Monetised /damages"),
 
 ####################################################################
 tabPanel(h5("Non-monetised damages"),
- 
-         h3("Amenity, consider the following: "),
-         br(),
-         tags$li ("Community Stability (includes employment/displacement effects)"),
-         tags$li ("Spiritual Values"), 
-         tags$li ("Aesthetics (landscapes, views, waterways)"),
-         tags$li ("Recreational, leisure, cultural activities"), 
-         tags$li ("Personal loss of freedom, impacts on mobility, choices, usually from management actions"),  
-         tags$li ("Fear and worry, perceptions of risk, not necessarily supported by evidence"),
-         br(),
-         sliderInput("amenity", h4("Negative impact on amenity, higher score values represent worse damage"), 
-                0, 100, 30, 5),
-         br(),
-         h3("Environment, consider damage to biodiversity, protected native species, and habitats."),
-         sliderInput("environment", h4("A proxy for environmental damage, higher score values represent worse damage"),
-                0, 100,30, 5)
+        fluidRow(column(5, 
+                        h3("Localised social impacts, consider the following: "), 
+                        tags$li ("Community Stability (includes employment/displacement effects)"),
+                        sliderInput("community", h4("Social impacts"), 
+                                    0, 5, 0, 1),
+                        actionButton("show_impact", "Impact Scores Explained"),
+                        h3("To access environmental damage consider impacts on:"),
+                        tags$li ("Biodiversity"),
+                        tags$li ("Protected native species"),
+                        tags$li ("Habitats"),
+                        sliderInput("environment", 
+                                    h4("Environmental damage"),
+                                    0, 5, 0, 1)
+                       
+                        ),
+                 column(1),
+                 column(5,
+                        h3("Amenity, consider the following: "),
+                        tags$li ("Spiritual Values"), 
+                        tags$li ("Aesthetics (landscapes, views, waterways)"),
+                        tags$li ("Recreational, leisure, cultural activities"), 
+                        tags$li ("Personal loss of freedom, impacts on mobility, choices, usually from management actions"),  
+                        tags$li ("Fear and worry, perceptions of risk, not necessarily supported by evidence"),
+                        br(),
+                        sliderInput("amenity", h4("Negative impacts on amenity, higher score values represent worse damage"), 
+                                    0, 5, 0, 1)
+                        
+                 )
+        )
          
 
 ),#end model inputs non-market 
@@ -213,7 +227,7 @@ tabPanel(h5("Eradication measures' utility"),
                         "http://onlinelibrary.wiley.com/doi/10.1111/risa.12089/abstract", 
                         "Holt et al. 2013",".")),align = "left"),
          
-         fluidRow(column(6,  
+        fluidRow(column(6,  
                         h4(em("Rate the potential for successful eradication
                         assuming full implementation of measures bearing in mind 
                         biological and ecological behaviour of the pest."))),
@@ -249,8 +263,7 @@ tabPanel(h5("Eradication measures' utility"),
         fluidRow(column(12, class = "erad_box", h3("Eradication measures' utility: "), 
                                align = "center")),
         fluidRow(column(3), column(6, br(),
-                                
-                                imageOutput("image3", width = "100%")
+                        imageOutput("image3", width = "100%")
                                 )
                 )         
 ),#end management utility 
@@ -260,39 +273,39 @@ tabPanel(h5("Ranking"),
         
         titlePanel("Prioritising species under different methods"),
         
-        fluidRow(column(12, h4(em("The species are ranked by adding weighted and normalised values for damages
-        to agriculture, amenity, and environment while taking the timescales of invasion for each species into account. 
-        Eradication measures' utility values and possibility of severe local impacts are currently not 
-        part of the ranking calculations.")))), 
+        fluidRow(column(12, h4(em("The species are ranked by adding normalised values for selected aspects, 
+                                using specified weights.")))), 
        
         fluidRow(column(6,        
                         h3("Select aspects to include:"), 
-                        checkboxInput("market", "National economy", value = TRUE),
-                        checkboxInput("nonmarket", "Amenity", value = TRUE), 
-                        checkboxInput("native_species", "Environment", value = TRUE),
-                        checkboxInput("localisation", "Community scale impacts", value = TRUE)
+                        checkboxInput("aspect_economy", "National economy", value = TRUE),
+                        checkboxInput("aspect_amenity", "Amenity", value = TRUE), 
+                        checkboxInput("aspect_environment", "Environment", value = TRUE),
+                        checkboxInput("aspect_community", "Social impacts", value = TRUE),
+                        checkboxInput("aspect_time", "Speed of Invasion", value = TRUE),
+                        checkboxInput("aspect_measures", "Utility of eradication measures", value = TRUE)
+                        
                 ),
        
                 column(6,##weights
-                        h3("Preferences on a scale from 1 (low) to 10 (high):"), 
-                        numericInput("weight_econ", "Weight, national economy", 1,
-                              1, 10, 1),
-                       numericInput("weight_local", "Weight, community level economic impacts", 1,
-                                    1, 10, 1),
-                        numericInput("weight_amen", "Weight, amenity", 1,
-                              1, 10, 1),
-                        numericInput("weight_env", "Weight, environment", 1,
-                              1, 10, 1)
+                        h3("Preferences on a scale from 1 (low) to 5 (high):"), 
+                        numericInput("weight_econ", "Weight, national economy", 3, 1, 5, 1),
+                        numericInput("weight_amen", "Weight, amenity", 3,
+                              1, 5, 1),
+                        numericInput("weight_env", "Weight, environment", 3,
+                              1, 5, 1),
+                        numericInput("weight_local", "Weight, social impacts", 3,
+                              1, 5, 1)
                 )
         ),
         br(),
         fluidRow(column(6, 
                         h3("Ranking using default values:"),
-                        plotOutput("rank_default", height = "400px")
+                        plotOutput("rank_default", width = "80%")
                 ),
                 column(6,
                         h3("Ranking using elicited values:"),
-                        plotOutput("rank_user", height = "400px")
+                        plotOutput("rank_user", width = "80%")
                 )
         )
 )#end overall ranking panel
