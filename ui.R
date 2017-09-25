@@ -68,17 +68,20 @@ fluidRow(
                         h3("Maximum range"), 
                         #h4("Simulated area of maximum invasion is ", 
                         #strong(textOutput("area", inline = TRUE)), "in millions of ha."),
-                        actionButton("show_map", "Exlanatory note")
+                        actionButton("show_map", "Explanatory note"),
+                        h3(htmlOutput("species_bio_assump"))
         ),# end second column
         column(1),
         column(3,
-               selectInput("timescale", h3("How quickly can the maximum range be reached, in years"), c(10, 30, 100)))
+               #selectInput("timescale", h3("How quickly can the maximum range be reached, in years"), c(10, 30, 100)))
+               sliderInput("timescale", h3("How quickly can the maximum range be reached, in years"), 
+               min= 0, max = 100, value = 0, step =10))
+        
 ), 
 #################################################################### 
 fluidRow(
-        column(3,  
-                imageOutput("species_photo")
-               
+        column(3, 
+               imageOutput("species_photo")
                
         ),# end first column 
         column(5, 
@@ -130,7 +133,7 @@ tabPanel(h5("Monetised /damages"),
                                 "and state your beliefs about possible proportional damage to each of the industries, 
                                 in the areas of overlap with the pest
                                 :"))), 
-        fluidRow(column(6, 
+        fluidRow(column(4, 
                         checkboxInput("broadacre_impact", h4("Broadacre cereal and non-cereal crops"), value = TRUE),
                         conditionalPanel(
                                 condition = "input.broadacre_impact == true",
@@ -151,7 +154,7 @@ tabPanel(h5("Monetised /damages"),
                                         0.1, 0.05)
                         ) 
                 ),# end first column 
-                column(6,
+                column(4,
                         checkboxInput("fruit_impact", h4("Fruit and nuts"), value = TRUE),
                         conditionalPanel(
                                 condition = "input.fruit_impact == true",
@@ -169,17 +172,16 @@ tabPanel(h5("Monetised /damages"),
                                 condition = "input.livestock_impact == true",
                                 sliderInput("livestock_percent_damage", "Reduction in livestock products, %", 0, 1,
                                         0.1, 0.05)
-                       ))), 
+                       )),
+                column(3, class = "tab_box",
+                       br(),br(),
+                       h3("On a national scale, the annual damage from this pest is", 
+                          strong(textOutput("agri_value_damage", inline = TRUE)),
+                          "in millions of Australian dollars."),
+                       br(),br()
+                      )
+                ) 
 
-        fluidRow(column(9, class = "tab_box", 
-                        
-                       
-                        h4("On a national scale, the annual damage from this pest is", 
-                           strong(textOutput("agri_value_damage", inline = TRUE)),
-                           "in millions of Australian dollars.") 
-                        
-                        ))     
-       
 ),#end model inputs market
 
 ####################################################################
@@ -189,7 +191,7 @@ tabPanel(h5("Non-monetised damages"),
                         tags$li ("Community Stability (includes employment/displacement effects)"),
                         sliderInput("community", h4("Social impacts"), 
                                     0, 5, 0, 1),
-                        actionButton("show_impact", "Impact Scores Explained"),
+                        actionButton("show_impact", "Social and Evironmental Impact Scores Explained"),
                         h3("To access environmental damage consider impacts on:"),
                         tags$li ("Biodiversity"),
                         tags$li ("Protected native species"),
@@ -243,7 +245,7 @@ tabPanel(h5("Eradication measures' utility"),
                                                 "Good","Medium",
                                                 "Poor","Very Poor")),
                         
-                        selectInput("unc_1", h3("Express your uncertainty in such rating"), c("VL","L","M","H")),
+                        selectInput("unc_1", h3("Express your uncertainty in such rating"), c("Very Low","Low","Medium","High")),
                         
                         imageOutput("image1", width = "90%"), br()
                 ),
@@ -252,7 +254,8 @@ tabPanel(h5("Eradication measures' utility"),
                                                 "Good","Medium",
                                                 "Poor","Very Poor")),
 
-                        selectInput("unc_2", h3("Express your uncertainty about this rating"), c("VL","L","M","H")),
+                        selectInput("unc_2", h3("Express your uncertainty about this rating"), 
+                                    c("Very Low","Low","Medium","High")),
                         imageOutput("image2", width = "90%"),
                         br()
                 )

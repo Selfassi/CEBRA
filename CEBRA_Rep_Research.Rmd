@@ -23,7 +23,9 @@ library(tidyr)
 library(magrittr)
 library(RColorBrewer)
 library(tmap)
+library(ellipse)
 require(lattice)
+library(ggplot2)
 
 ```
 
@@ -654,4 +656,35 @@ Store "Input_App.csv" in the 'data' directory for use by the app, this file now 
         #Look at the names of the top 10 largest by monetary damage
         input_app[order(-input_app$Monetary_Damage),][1:10,][,c("Species", "Monetary_Damage", "Unweighted_Score")]
         
+```
+
+##Alternative visualisations
+
+In addition to ranking, it is possible to visualise relative risks in two dimensions: 
+impact uncertainty (randomness comes from uncertainty in entry, spread, and establishment) 
+and management uncertainty (uncertainty distribution is derived from expert beliefs about possibilities of eradication). 
+
+```{r ellipses, eval = TRUE}
+
+        theme_set(theme_classic())
+        mon_damage<-input_app$Monetary_Damage[input_app$Species=="Xylella"]
+        risk_dist<-mon_damage*rnorm(10000,mean=input_app$Likelihood[input_app$Species=="Xylella"], sd = 0.1)
+        management_unc<-rnorm(10000, 0.6, 0.05)
+
+        df<-data.frame(score=risk_dist,management=management_unc, species="Xylella")
+
+        mon_damage<-input_app$Monetary_Damage[input_app$Species=="Ug99"]
+        risk_dist<-mon_damage*rnorm(10000,mean=input_app$Likelihood[input_app$Species=="Ug99"], sd = 0.1)
+        management_unc<-rnorm(10000, 0.4, 0.1)
+
+        df <- rbind(df, data.frame(score=risk_dist,management=management_unc, species="Ug99"))
+
+
+        p <- ggplot(data=df, aes(x=score, y=management,colour=species)) + geom_point(size=0.5, alpha=.6) +
+                stat_ellipse(data=df, aes(x=score, y=management,colour=species, fill=factor(df$species)), size=1,
+                     geom="polygon",level=0.95,alpha=0.4)+
+                xlab("Monetary damage uncertainty")+ylab("Management uncertainty")+
+                scale_fill_manual(values=c("orange","blue"), name="95% density", 
+                          labels=unique(df$species))
+        p
 ```

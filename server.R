@@ -54,6 +54,9 @@ beta$SelScore[beta$SelScore==3]<-"Medium"
 beta$SelScore[beta$SelScore==4]<-"Poor"
 beta$SelScore[beta$SelScore==5]<-"Very Poor"
 
+#Change column names for uncertainty dimension "VL" to "Very Low", etc
+names(beta)<-c("Score","SelScore","Very Low","Low","Medium","High")
+
 #Choose traffic light colours suitable for colour blind people
 colours<-c("#008837","#a6dba0","#f7f7f7","#c2a5cf","#7b3294")
 
@@ -98,8 +101,15 @@ shinyServer(function(session,input, output) {
                                             alt = "Pest"))
                                 }, deleteFile = FALSE) #end select picture
         
+        ####################################################################        
+        #Link species image to the website with the biological assumptions    
+        output$species_bio_assump <- renderUI({
+                                typeSp<-reactive(input$species)  
+                                url<-tags$a(" click here", href=input_app[input_app$Species==typeSp(),"WebLink"],target="_blank")
+                                tagList("Biological assumptions: ", url)
+                        }) #end select web link
         
-
+      
         ####################################################################         
         #Map showing maximum range of invasive species 
         output$map <- renderImage({
@@ -189,9 +199,9 @@ shinyServer(function(session,input, output) {
                 updateSliderInput(session,"community", 
                                   value = input_app[input_app$Species==typeSp,"Community"],
                                   min = 0, max = 5, step = 1)
-                updateSelectInput(session, "timescale", 
-                                        choices = c(10, 30, 100),
-                                        selected = input_app[input_app$Species==typeSp,"Time"])
+                updateSliderInput(session, "timescale", 
+                                  min = 0, max = 100, step = 5,
+                                  value = input_app[input_app$Species==typeSp,"Time"])
         })
         
 
