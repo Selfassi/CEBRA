@@ -127,7 +127,7 @@ fluidRow(column(3,
                tabsetPanel(
                         
 ####################################################################
-tabPanel(h5("Monetised /damages"), 
+tabPanel(h5("Monetised damages"), 
          
         fluidRow(column(12,h3("Select types of agricultural production at risk from ",textOutput("species_name", inline = TRUE),
                                 "and state your beliefs about possible proportional damage to each of the industries, 
@@ -298,7 +298,11 @@ tabPanel(h5("Ranking"),
                         numericInput("weight_env", "Weight, environment", 3,
                               1, 5, 1),
                         numericInput("weight_local", "Weight, social impacts", 3,
-                              1, 5, 1)
+                              1, 5, 1),
+                        numericInput("weight_time", "Weight, speed of invasion", 3,
+                                    1, 5, 1),
+                        numericInput("weight_measures", "Weight, utility of eradication measures", 3,
+                                    1, 5, 1)
                 )
         ),
         br(),

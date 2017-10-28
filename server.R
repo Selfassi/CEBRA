@@ -290,11 +290,11 @@ shinyServer(function(session,input, output) {
                                                         max(input_app$Monetary_Damage)+
                                                 input$aspect_amenity*input$weight_amen*input_app$Amenity/
                                                         max(input_app$Amenity)+
-                                                input$aspect_time*(1-input_app$Time/
+                                                input$aspect_time*input$weight_time*(1-input_app$Time/
                                                         max(input_app$Time))+
                                                 input$aspect_community*input$weight_local*input_app$Community/
                                                         max(input_app$Community)+
-                                                input$aspect_measures*(1-input_app$Man_Utility/5
+                                                input$aspect_measures*input$weight_measures*(1-input_app$Man_Utility/5
                                                         ))*input_app$Likelihood
                                     
                                 })
@@ -305,9 +305,9 @@ shinyServer(function(session,input, output) {
                                              max((input$aspect_environment*input$weight_env+
                                               input$aspect_economy*input$weight_econ+
                                               input$aspect_amenity*input$weight_amen+
-                                              input$aspect_time+
+                                              input$aspect_time*input$weight_time+
                                               input$aspect_community*input$weight_local+
-                                              input$aspect_measures),1)
+                                              input$aspect_measures*input$weight_measures),1)
                                     })
                                 
                                 input_app<-mutate(input_app, Measure=temp())
@@ -334,11 +334,11 @@ shinyServer(function(session,input, output) {
                                                 max(input_app$Monetary_Damage)+
                                         input$aspect_amenity*input$weight_amen*input_app$Amenity_User/
                                                 max(input_app$Amenity)+
-                                        input$aspect_time*(1-input_app$Time_User/
+                                        input$aspect_time*input$weight_time*(1-input_app$Time_User/
                                                 max(input_app$Time))+
                                         input$aspect_community*input$weight_local*input_app$Community_User/
                                                 max(input_app$Community)+
-                                        input$aspect_measures*(1-input_app$Man_Utility_User/5
+                                        input$aspect_measures*input$weight_measures*(1-input_app$Man_Utility_User/5
                                                 ))*input_app$Likelihood_User
                                 })
                           
@@ -346,9 +346,9 @@ shinyServer(function(session,input, output) {
                             max((input$aspect_environment*input$weight_env+
                                    input$aspect_economy*input$weight_econ+
                                    input$aspect_amenity*input$weight_amen+
-                                   input$aspect_time+
+                                   input$aspect_time*input$weight_time+
                                    input$aspect_community*input$weight_local+
-                                   input$aspect_measures),1)
+                                   input$aspect_measures*input$weight_measures),1)
                           })
                           
                           input_app<-mutate(input_app, Measure=temp())
